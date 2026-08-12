@@ -85,7 +85,7 @@ export default class ListFilter {
 	append_create_new_item($menu) {
 		const new_filter = {
 			name: "create_new",
-			filter_name: "Save Current Filter",
+			filter_name: __("Save Current Filter"),
 		};
 
 		const $create_item = this.filter_template(new_filter, true);

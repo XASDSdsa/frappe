@@ -24922,6 +24922,10 @@ msgstr "保存报表"
 msgid "Save filters"
 msgstr "保存过滤条件"
 
+#: frappe/public/js/frappe/list/list_filter.js:88
+msgid "Save Current Filter"
+msgstr "保存当前筛选条件"
+
 #. Label of the save_on_complete (Check) field in DocType 'Form Tour'
 #: frappe/desk/doctype/form_tour/form_tour.json
 msgid "Save on Completion"
