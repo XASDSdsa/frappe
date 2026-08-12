@@ -468,7 +468,7 @@ frappe.customize_form.confirm = function (msg, frm) {
 	if (!frm.doc.doc_type) return;
 
 	var d = new frappe.ui.Dialog({
-		title: "Reset To Defaults",
+		title: __("Reset To Defaults"),
 		fields: [
 			{
 				fieldtype: "HTML",

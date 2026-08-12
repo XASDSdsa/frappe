@@ -184,7 +184,7 @@ frappe.ui.form.qz_connect = function () {
 						} else {
 							frappe.show_alert(
 								{
-									message: "QZ Tray " + err.toString(),
+									message: __("QZ Tray: {0}", [err.toString()]),
 									indicator: "red",
 								},
 								14

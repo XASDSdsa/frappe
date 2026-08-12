@@ -2,19 +2,19 @@
 
     <div class="p-2">
         {% if documents.length > 1 %}
-            <p>Documents to Compare : <b>{{ documents.length }}</b></p>
+            <p>{%= __("Documents to Compare") %}：<b>{{ documents.length }}</b></p>
         {% else %}
-            <p>Documents to Compare : <b>{{ documents.length - 1 }}</b></p>
+            <p>{%= __("Documents to Compare") %}：<b>{{ documents.length - 1 }}</b></p>
         {% endif %}
     </div>
 
     {% var field_keys = Object.keys(changed).sort(); %}
     {% if field_keys.length > 0 %}
     <div class="p-2">
-        <h5><b>Fields Changed</b></h5>
+        <h5><b>{%= __("Fields Changed") %}</b></h5>
         <table class="table table-bordered">
             <thead>
-                <th> Fields </th>
+                <th>{%= __("Fields") %}</th>
                 {% for doc in documents %}
                     <th>{{ frappe.utils.escape_html(doc) }}</th>
                 {% endfor %}
@@ -38,10 +38,10 @@
     {% var tables  = Object.keys(row_changed).sort(); %}
     {% if tables.length > 0 %}
         <div class="p-2">
-            <h5><b>Rows Updated</b></h5>
+            <h5><b>{%= __("Rows Updated") %}</b></h5>
             <table class="table table-bordered">
                 <thead>
-                    <th> Fields </th>
+                    <th>{%= __("Fields") %}</th>
                 </thead>
                 <tbody>
                     {% for table in tables %}

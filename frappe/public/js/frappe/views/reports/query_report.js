@@ -1265,7 +1265,7 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 			fields: [
 				{
 					fieldname: "x_field",
-					label: "X Field",
+					label: __("X Field"),
 					fieldtype: "Select",
 					default: me.chart_fields ? me.chart_fields.x_field : null,
 					options: field_options.non_numeric_fields,
@@ -1276,7 +1276,7 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 				},
 				{
 					fieldname: "chart_type",
-					label: "Type of Chart",
+					label: __("Type of Chart"),
 					fieldtype: "Select",
 					options: ["Bar", "Line", "Percentage", "Pie", "Donut"],
 					default: me.chart_fields ? me.chart_fields.chart_type : "Bar",
@@ -1284,7 +1284,7 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 				{
 					fieldname: "sb_1",
 					fieldtype: "Section Break",
-					label: "Y Axis",
+					label: __("Y Axis"),
 				},
 				{
 					fieldname: "y_axis_fields",
@@ -1310,22 +1310,22 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 				{
 					fieldname: "preview_chart_button",
 					fieldtype: "Button",
-					label: "Preview Chart",
+					label: __("Preview Chart"),
 					click: preview_chart,
 				},
 				{
 					fieldname: "sb_2",
 					fieldtype: "Section Break",
-					label: "Chart Preview",
+					label: __("Chart Preview"),
 				},
 				{
 					fieldname: "chart_preview",
-					label: "Chart Preview",
+					label: __("Chart Preview"),
 					fieldtype: "HTML",
 				},
 				{
 					fieldname: "create_dashoard_chart",
-					label: "Add Chart to Dashboard",
+					label: __("Add Chart to Dashboard"),
 					fieldtype: "Button",
 					hidden: 1,
 					click: () => {

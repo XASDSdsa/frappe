@@ -42,13 +42,14 @@ frappe.ui.form.on("Note", {
 frappe.tour["Note"] = [
 	{
 		fieldname: "title",
-		title: "Title of the Note",
-		description: "This is the name by which the note will be saved, you can change this later",
+		title: __("Title of the Note"),
+		description: __("This is the name by which the note will be saved, you can change this later"),
 	},
 	{
 		fieldname: "public",
-		title: "Sets the Note to Public",
-		description:
-			"You can change the visibility of the note with this, setting it to public will allow other users to view it.",
+		title: __("Sets the Note to Public"),
+		description: __(
+			"You can change the visibility of the note with this, setting it to public will allow other users to view it."
+		),
 	},
 ];

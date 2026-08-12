@@ -8,10 +8,10 @@ frappe.query_reports["Database Storage Usage By Tables"] = {
 			__("Optimize"),
 			function () {
 				let d = new frappe.ui.Dialog({
-					title: "Optimize Doctype",
+					title: __("Optimize DocType"),
 					fields: [
 						{
-							label: "Select a DocType",
+							label: __("Select a DocType"),
 							fieldname: "doctype_name",
 							fieldtype: "Link",
 							options: "DocType",
@@ -23,7 +23,7 @@ frappe.query_reports["Database Storage Usage By Tables"] = {
 						},
 					],
 					size: "small",
-					primary_action_label: "Optimize",
+					primary_action_label: __("Optimize"),
 					primary_action(values) {
 						frappe.call({
 							method: "frappe.core.report.database_storage_usage_by_tables.database_storage_usage_by_tables.optimize_doctype",

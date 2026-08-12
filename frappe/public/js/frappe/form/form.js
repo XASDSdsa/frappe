@@ -507,7 +507,7 @@ frappe.ui.form.Form = class FrappeForm {
 			}
 
 			if (typeof action === "string") {
-				frappe.throw(`Action ${action} not found`);
+				frappe.throw(__("Action {0} not found", [action]));
 			}
 		}
 		if (action.action_type === "Server Action") {

@@ -519,7 +519,7 @@ def get_server_messages(app):
 	"""Extracts all translatable strings (tagged with :func:`frappe._`) from Python modules
 	inside an app"""
 	messages = []
-	file_extensions = (".py", ".html", ".js", ".vue")
+	file_extensions = (".py", ".html", ".js", ".ts", ".tsx", ".vue")
 	app_walk = os.walk(frappe.get_app_path(app))
 
 	for basepath, folders, files in app_walk:
@@ -564,7 +564,7 @@ def get_all_messages_from_js_files(app_name=None):
 					continue
 
 				for fname in files:
-					if fname.endswith(".js") or fname.endswith(".html") or fname.endswith(".vue"):
+					if fname.endswith((".js", ".ts", ".tsx", ".html", ".vue")):
 						messages.extend(get_messages_from_file(os.path.join(basepath, fname)))
 
 	return messages
@@ -604,7 +604,7 @@ def get_messages_from_file(path: str) -> list[tuple[str, str, str | None, int]]:
 		else:
 			messages += extract_messages_from_code(file_contents)
 
-		if path.lower().endswith(".js"):
+		if path.lower().endswith((".js", ".ts", ".tsx")):
 			# For JS also use JS parser to extract strings possibly missed out
 			# by regex based extractor.
 			messages += extract_messages_from_javascript_code(file_contents)

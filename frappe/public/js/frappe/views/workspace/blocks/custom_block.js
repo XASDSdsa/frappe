@@ -2,7 +2,7 @@ import Block from "./block.js";
 export default class CustomBlock extends Block {
 	static get toolbox() {
 		return {
-			title: "Custom Block",
+			title: __("Custom Block"),
 			icon: frappe.utils.icon("edit", "sm"),
 		};
 	}

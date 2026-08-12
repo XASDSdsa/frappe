@@ -263,7 +263,7 @@ export default class BulkOperations {
 						ignore_permissions: true,
 					},
 					freeze: true,
-					freeze_message: "Removing assignments...",
+					freeze_message: __("Removing assignments..."),
 				})
 				.then(() => {
 					done();

@@ -259,8 +259,8 @@ frappe.listview_settings["User Permission"] = {
 
 	on_docname_change: function (dialog, options, applicable) {
 		if (applicable.length != 0) {
-			dialog.set_primary_action("Update");
-			dialog.set_title("Update User Permissions");
+			dialog.set_primary_action(__("Update"));
+			dialog.set_title(__("Update User Permissions"));
 			dialog.set_df_property("applicable_doctypes", "options", options);
 			if (
 				dialog.fields_dict.applicable_doctypes.get_checked_options().length ==
@@ -272,8 +272,8 @@ frappe.listview_settings["User Permission"] = {
 				dialog.set_df_property("apply_to_all_doctypes", "checked", 0);
 			}
 		} else {
-			dialog.set_primary_action("Submit");
-			dialog.set_title("Add User Permissions");
+			dialog.set_primary_action(__("Submit"));
+			dialog.set_title(__("Add User Permissions"));
 			dialog.set_df_property("applicable_doctypes", "options", options);
 			dialog.set_df_property("applicable_doctypes", "hidden", 1);
 		}

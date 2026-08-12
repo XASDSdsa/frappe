@@ -3,7 +3,7 @@ import Block from "./block.js";
 export default class Onboarding extends Block {
 	static get toolbox() {
 		return {
-			title: "Onboarding",
+			title: __("Onboarding"),
 			icon: frappe.utils.icon("onboarding", "sm"),
 		};
 	}

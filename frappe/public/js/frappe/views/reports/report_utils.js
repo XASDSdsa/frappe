@@ -173,7 +173,7 @@ frappe.report_utils = {
 	get_export_dialog(report_name, extra_fields, callback) {
 		const fields = [
 			{
-				label: "File Format",
+				label: __("File Format"),
 				fieldname: "file_format",
 				fieldtype: "Select",
 				options: ["Excel", "CSV"],
@@ -188,13 +188,13 @@ frappe.report_utils = {
 			{
 				fieldtype: "Section Break",
 				fieldname: "csv_settings",
-				label: "Settings",
+				label: __("Settings"),
 				collapsible: 1,
 				depends_on: "eval:doc.file_format=='CSV'",
 			},
 			{
 				fieldtype: "Data",
-				label: "CSV Delimiter",
+				label: __("CSV Delimiter"),
 				fieldname: "csv_delimiter",
 				default: ",",
 				length: 1,
@@ -202,20 +202,20 @@ frappe.report_utils = {
 			},
 			{
 				fieldtype: "Select",
-				label: "CSV Quoting",
+				label: __("CSV Quoting"),
 				fieldname: "csv_quoting",
 				options: [
-					{ value: 0, label: "Minimal" },
-					{ value: 1, label: "All" },
-					{ value: 2, label: "Non-numeric" },
-					{ value: 3, label: "None" },
+					{ value: 0, label: __("Minimal") },
+					{ value: 1, label: __("All") },
+					{ value: 2, label: __("Non-numeric") },
+					{ value: 3, label: __("None") },
 				],
 				default: 2,
 				depends_on: "eval:doc.file_format=='CSV'",
 			},
 			{
 				fieldtype: "Data",
-				label: "CSV Decimal Separator",
+				label: __("CSV Decimal Separator"),
 				fieldname: "csv_decimal_sep",
 				default: ".",
 				length: 1,
@@ -223,7 +223,7 @@ frappe.report_utils = {
 			},
 			{
 				fieldtype: "Small Text",
-				label: "CSV Preview",
+				label: __("CSV Preview"),
 				fieldname: "csv_preview",
 				read_only: 1,
 				depends_on: "eval:doc.file_format=='CSV'",

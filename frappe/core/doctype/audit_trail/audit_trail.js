@@ -43,7 +43,7 @@ frappe.ui.form.on("Audit Trail", {
 			};
 		});
 
-		frm.page.set_primary_action("Compare", () => {
+		frm.page.set_primary_action(__("Compare"), () => {
 			frm.events.get_audit_trail_for_document(frm);
 		});
 	},

@@ -127,28 +127,28 @@ frappe.ui.sidebar_item.TypeLink = class SidebarItem {
 		let me = this;
 		let menu_items = [
 			{
-				label: "Edit Item",
+				label: __("Edit Item"),
 				icon: "pen",
 				onClick: () => {
 					frappe.app.sidebar.editor.perform_action("edit", me.item);
 				},
 			},
 			{
-				label: "Add Item Below",
+				label: __("Add Item Below"),
 				icon: "add",
 				onClick: () => {
 					frappe.app.sidebar.editor.perform_action("add_below", me.item);
 				},
 			},
 			{
-				label: "Duplicate",
+				label: __("Duplicate"),
 				icon: "copy",
 				onClick: () => {
 					frappe.app.sidebar.editor.perform_action("duplicate", me.item);
 				},
 			},
 			{
-				label: "Delete",
+				label: __("Delete"),
 				icon: "trash-2",
 				onClick: () => {
 					console.log(me.item);
@@ -313,7 +313,7 @@ frappe.ui.sidebar_item.TypeSectionBreak = class SectionBreakSidebarItem extends 
 		let me = this;
 		let menu_items = [
 			{
-				label: "Edit Item",
+				label: __("Edit Item"),
 				icon: "pen",
 				onClick: () => {
 					console.log("Start ediitng");
@@ -321,7 +321,7 @@ frappe.ui.sidebar_item.TypeSectionBreak = class SectionBreakSidebarItem extends 
 				},
 			},
 			{
-				label: "Add Nested Items",
+				label: __("Add Nested Items"),
 				icon: "add",
 				onClick: () => {
 					frappe.app.sidebar.editor.show_new_dialog({
@@ -331,14 +331,14 @@ frappe.ui.sidebar_item.TypeSectionBreak = class SectionBreakSidebarItem extends 
 				},
 			},
 			{
-				label: "Duplicate",
+				label: __("Duplicate"),
 				icon: "copy",
 				onClick: () => {
 					frappe.app.sidebar.editor.perform_action("duplicate", me.item);
 				},
 			},
 			{
-				label: "Delete",
+				label: __("Delete"),
 				icon: "trash-2",
 				onClick: () => {
 					frappe.app.sidebar.editor.perform_action("delete", me.item);

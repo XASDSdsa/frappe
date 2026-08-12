@@ -4,7 +4,7 @@
 			<form class="form-inline form-search" action="/{{ pathname | urlencode }}">
 				<div class="input-group">
 					<input class="form-control" doctype="text" name="txt"
-						placeholder="Search..." value="{{ (txt or '') | e }}">
+						placeholder="{{ _('Search...') }}" value="{{ (txt or '') | e }}">
 					<span class="input-group-btn">
 						<button class="btn btn-light" type="submit">
 							<i class="fa fa-search"></i></button>
@@ -15,7 +15,7 @@
 	</div>
 	{% if txt %}
 	<div>
-		<div class="filter-message small text-muted">Results filtered by <b>{{ txt | e }}</b>.
+		<div class="filter-message small text-muted">{{ _("Results filtered by") }} <b>{{ txt | e }}</b>。
 			<a href="/{{ pathname }}" class="text-muted">( <span class="close-inline">&times;</span> {{ _("clear") }} )</a></div>
 	</div>
 	{% endif %}

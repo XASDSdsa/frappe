@@ -2,7 +2,7 @@ import Block from "./block.js";
 export default class QuickList extends Block {
 	static get toolbox() {
 		return {
-			title: "Quick List",
+			title: __("Quick List"),
 			icon: frappe.utils.icon("list", "sm"),
 		};
 	}

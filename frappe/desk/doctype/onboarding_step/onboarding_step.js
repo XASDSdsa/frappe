@@ -43,7 +43,7 @@ frappe.ui.form.on("Onboarding Step", {
 frappe.tour['Note'] = [
 	{
 		fieldname: "title",
-		title: "Title of the Note",
+		title: __("Title of the Note"),
 		description: "...",
 	}
 ];

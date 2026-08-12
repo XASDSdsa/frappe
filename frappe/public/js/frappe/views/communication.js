@@ -119,7 +119,7 @@ frappe.views.CommunicationComposer = class {
 				fieldname: "use_html",
 				default: 0,
 				hidden: 1,
-				description: "Use Raw HTML email editor.",
+				description: __("Use Raw HTML email editor."),
 				onchange: (event) => {
 					me.on_use_html_toggle(event);
 				},

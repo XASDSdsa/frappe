@@ -381,9 +381,10 @@ frappe.ui.form.on("User", {
 			frm.add_custom_button(__("Impersonate"), () => {
 				if (frm.doc.restrict_ip) {
 					frappe.msgprint({
-						message:
-							"There's IP restriction for this user, you can not impersonate as this user.",
-						title: "IP restriction is enabled",
+						message: __(
+							"There's IP restriction for this user, you can not impersonate as this user."
+						),
+						title: __("IP restriction is enabled"),
 					});
 					return;
 				}
@@ -392,7 +393,7 @@ frappe.ui.form.on("User", {
 						{
 							fieldname: "reason",
 							fieldtype: "Small Text",
-							label: "Reason for impersonating",
+							label: __("Reason for impersonating"),
 							description: __("Note: This will be shared with user."),
 							reqd: 1,
 						},

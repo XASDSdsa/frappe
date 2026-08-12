@@ -298,7 +298,7 @@ class DesktopPage {
 		const me = this;
 		let menu_items = [
 			{
-				label: "Edit Layout",
+				label: __("Edit Layout"),
 				icon: "edit",
 				condition: function () {
 					return !me.edit_mode;
@@ -309,7 +309,7 @@ class DesktopPage {
 				},
 			},
 			{
-				label: "Reset Layout",
+				label: __("Reset Layout"),
 				icon: "rotate-ccw",
 				onClick: function () {
 					reset_to_default();
@@ -553,7 +553,7 @@ class DesktopPage {
 			},
 			{
 				icon: "info",
-				label: "About",
+				label: __("About"),
 				onClick: function () {
 					return frappe.ui.toolbar.show_about();
 				},
@@ -561,14 +561,14 @@ class DesktopPage {
 			},
 			{
 				icon: "support",
-				label: "Frappe Support",
+				label: __("Frappe Support"),
 				onClick: function () {
 					window.open("https://support.frappe.io/help", "_blank");
 				},
 			},
 			{
 				icon: "rotate-ccw",
-				label: "Reset Desktop Layout",
+				label: __("Reset Desktop Layout"),
 				onClick: function () {
 					reset_to_default();
 					window.location.reload();
@@ -582,7 +582,7 @@ class DesktopPage {
 		// Logout is appended after sorting so it stays last whatever `order` apps pass in.
 		menu_items.push({
 			icon: "log-out",
-			label: "Logout",
+		label: __("Logout"),
 			onClick: function () {
 				frappe.app.logout();
 			},
@@ -1092,7 +1092,7 @@ class DesktopIcon {
 					},
 				},
 				{
-					label: "Create Folder",
+					label: __("Create Folder"),
 					icon: "folder",
 					onClick: function () {
 						let folder = me.icon_grid.add_folder();
@@ -1100,7 +1100,7 @@ class DesktopIcon {
 					},
 				},
 				{
-					label: "Add To Folder",
+					label: __("Add To Folder"),
 					icon: "folder-open",
 					condition: function () {
 						return me.folders.length > 0;

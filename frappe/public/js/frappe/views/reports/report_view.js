@@ -1856,7 +1856,7 @@ frappe.views.ReportView = class ReportView extends frappe.views.ListView {
 			items.push({
 				label: __("Delete"),
 				action: () =>
-					frappe.confirm("Are you sure you want to delete this report?", () =>
+					frappe.confirm(__("Are you sure you want to delete this report?"), () =>
 						this.delete_report()
 					),
 				shortcut: "Shift+Ctrl+D",

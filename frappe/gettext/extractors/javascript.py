@@ -4,7 +4,13 @@ from io import BufferedReader
 def extract(fileobj: BufferedReader, keywords: str, comment_tags: tuple, options: dict):
 	code = fileobj.read().decode("utf-8")
 
-	for lineno, funcname, messages in extract_javascript(code, options=options):
+	translation_keywords = {"__"}
+	if keywords and "_" in keywords:
+		translation_keywords.add("_")
+
+	for lineno, funcname, messages in extract_javascript(
+		code, keywords=translation_keywords, options=options
+	):
 		if not messages or not messages[0]:
 			continue
 

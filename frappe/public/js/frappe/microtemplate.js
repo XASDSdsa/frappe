@@ -114,7 +114,7 @@ frappe.render_template = function (name, data) {
 		data = {};
 	}
 	if (!template) {
-		frappe.throw(`Template <b>${name}</b> not found.`);
+		frappe.throw(__("Template <b>{0}</b> not found.", [name]));
 	}
 	return frappe.render(template, data, name);
 };

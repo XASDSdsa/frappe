@@ -12,13 +12,15 @@ $(document).ready(function () {
 		const diffTime = trial_end_date - today;
 		const trial_end_days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 		const trial_end_string =
-			trial_end_days > 1 ? `${trial_end_days} days` : `${trial_end_days} day`;
+			trial_end_days > 1
+				? __("{0} days", [trial_end_days])
+				: __("{0} day", [trial_end_days]);
 
 		const banner_message = isFCUser
-			? "Please upgrade for uninterrupted services"
-			: "Please contact your system administrator to upgrade your plan.";
+			? __("Please upgrade for uninterrupted services")
+			: __("Please contact your system administrator to upgrade your plan.");
 		let card_args = {
-			title: `Your trial ends in ${trial_end_string}`,
+			title: __("Your trial ends in {0}", [trial_end_string]),
 			message: banner_message,
 			outline: true,
 			close_button: true,
@@ -42,7 +44,7 @@ $(document).ready(function () {
 		}
 		if (isFCUser) {
 			$.extend(card_args, {
-				primary_action_label: "Upgrade",
+				primary_action_label: __("Upgrade"),
 				primary_action_suffix_icon: "square-arrow-out-up-right",
 				styles: {
 					"frappe-card-button-bg-color": "var(--surface-gray-2)",

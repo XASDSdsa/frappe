@@ -113,94 +113,96 @@ frappe.listview_settings["Recorder"] = {
 				{
 					fieldtype: "Column Break",
 					fieldname: "web_request_columns",
-					label: "Web Requests",
+					label: __("Web Requests"),
 				},
 				{
 					fieldname: "record_requests",
 					fieldtype: "Check",
-					label: "Record Web Requests",
+					label: __("Record Web Requests"),
 					default: 1,
 				},
 				{
 					fieldname: "request_filter",
 					fieldtype: "Data",
-					label: "Request path filter",
+					label: __("Request path filter"),
 					default: "/",
 					depends_on: "record_requests",
-					description: `This will be used for filtering paths which will be recorded.
-						You can use this to avoid slowing down other traffic.
-						e.g. <code>/api/method/erpnext</code>. Leave it empty to record every request.`,
+					description: __(
+						"This filters the paths to record. Use it to avoid slowing down other traffic; for example, <code>/api/method/erpnext</code>. Leave it empty to record every request."
+					),
 				},
 				{
 					fieldtype: "Column Break",
 					fieldname: "background_col",
-					label: "Background Jobs",
+					label: __("Background Jobs"),
 				},
 
 				{
 					fieldname: "record_jobs",
 					fieldtype: "Check",
-					label: "Record Background Jobs",
+					label: __("Record Background Jobs"),
 					default: 1,
 				},
 				{
 					fieldname: "jobs_filter",
 					fieldtype: "Data",
-					label: "Background Jobs filter",
+					label: __("Background Jobs filter"),
 					default: "",
 					depends_on: "record_jobs",
-					description: `This will be used for filtering jobs which will be recorded.
-						You can use this to avoid slowing down other jobs. e.g. <code>email_queue.pull</code>.
-						Leave it empty to record every job.`,
+					description: __(
+						"This filters the background jobs to record. Use it to avoid slowing down other jobs; for example, <code>email_queue.pull</code>. Leave it empty to record every job."
+					),
 				},
 				{
 					fieldtype: "Section Break",
 					fieldname: "sql_section",
-					label: "SQL",
+					label: __("SQL"),
 				},
 				{
 					fieldname: "record_sql",
 					fieldtype: "Check",
-					label: "Record SQL queries",
+					label: __("Record SQL queries"),
 					default: 1,
 				},
 				{
 					fieldname: "explain",
 					fieldtype: "Check",
-					label: "Generate EXPLAIN for SQL queries",
+					label: __("Generate EXPLAIN for SQL queries"),
 					default: 1,
 				},
 				{
 					fieldname: "capture_stack",
 					fieldtype: "Check",
-					label: "Capture callstack of SQL queries",
+					label: __("Capture callstack of SQL queries"),
 					default: 1,
 				},
 				{
 					fieldtype: "Section Break",
 					fieldname: "doc_events_section",
-					label: "Document Events",
+					label: __("Document Events"),
 				},
 				{
 					fieldname: "capture_doc_events",
 					fieldtype: "Check",
-					label: "Capture document lifecycle timeline",
+					label: __("Capture document lifecycle timeline"),
 					default: 1,
-					description: `Records each document lifecycle method / <code>doc_events</code> handler
-						that runs during the request, timed and attributed to the app that hooks it.`,
+					description: __(
+						"Records each document lifecycle method or <code>doc_events</code> handler that runs during the request, including its duration and the app that registered it."
+					),
 				},
 				{
 					fieldtype: "Section Break",
 					fieldname: "python_section",
-					label: "Python",
+					label: __("Python"),
 				},
 				{
 					fieldname: "profile",
 					fieldtype: "Check",
-					label: "Run cProfile",
+					label: __("Run cProfile"),
 					default: 0,
-					description:
-						"Warning: cProfile adds a lot of overhead. For best results, disable stack capturing when using cProfile.",
+					description: __(
+						"Warning: cProfile adds significant overhead. For best results, disable stack capturing when using cProfile."
+					),
 				},
 			],
 			(values) => {

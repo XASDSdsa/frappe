@@ -238,7 +238,7 @@ export class SidebarEditor {
 				fieldname: "label",
 				fieldtype: "Data",
 				in_list_view: 1,
-				label: "Label",
+				label: __("Label"),
 				onchange: function (opts) {
 					let label = this.get_value();
 					switch (label) {
@@ -292,7 +292,7 @@ export class SidebarEditor {
 				fieldname: "type",
 				fieldtype: "Select",
 				in_list_view: 1,
-				label: "Type",
+				label: __("Type"),
 				options: "Link\nSection Break\nSpacer\nSidebar Item Group",
 				onchange: function () {
 					let type = this.get_value();
@@ -307,7 +307,7 @@ export class SidebarEditor {
 				fieldname: "link_type",
 				fieldtype: "Select",
 				in_list_view: 1,
-				label: "Link Type",
+				label: __("Link Type"),
 				options: "DocType\nPage\nReport\nWorkspace\nDashboard\nURL",
 				onchange: function () {
 					d.set_value("link_to", null);
@@ -318,7 +318,7 @@ export class SidebarEditor {
 				fieldname: "link_to",
 				fieldtype: "Dynamic Link",
 				in_list_view: 1,
-				label: "Link To",
+				label: __("Link To"),
 				options: "link_type",
 				onchange: function () {
 					if (d.get_value("link_type") == "DocType") {
@@ -333,7 +333,7 @@ export class SidebarEditor {
 				depends_on: 'eval: doc.link_type == "URL"',
 				fieldname: "url",
 				fieldtype: "Data",
-				label: "URL",
+				label: __("URL"),
 			},
 			{
 				depends_on:
@@ -342,7 +342,7 @@ export class SidebarEditor {
 				fieldtype: "Icon",
 				options: "Emojis",
 				in_list_view: 1,
-				label: "Icon",
+				label: __("Icon"),
 			},
 			{
 				fieldtype: "HTML",
@@ -352,27 +352,27 @@ export class SidebarEditor {
 				depends_on: 'eval: doc.type == "Section Break"',
 				fieldname: "display_section",
 				fieldtype: "Section Break",
-				label: "Options",
+				label: __("Options"),
 			},
 			{
 				default: "0",
 				depends_on: 'eval: doc.type == "Section Break"',
 				fieldname: "indent",
 				fieldtype: "Check",
-				label: "Indent",
+				label: __("Indent"),
 			},
 			{
 				depends_on: "eval: doc.indent == 1",
 				fieldname: "show_arrow",
 				fieldtype: "Check",
-				label: "Show Arrow",
+				label: __("Show Arrow"),
 			},
 			{
 				default: "1",
 				depends_on: 'eval: doc.type == "Section Break"',
 				fieldname: "collapsible",
 				fieldtype: "Check",
-				label: "Collapsible",
+				label: __("Collapsible"),
 			},
 			{
 				fieldname: "column_break_krzu",
@@ -383,12 +383,12 @@ export class SidebarEditor {
 				depends_on: 'eval: doc.type == "Section Break"',
 				fieldname: "keep_closed",
 				fieldtype: "Check",
-				label: "Keep Closed",
+				label: __("Keep Closed"),
 			},
 			{
 				fieldname: "details_section",
 				fieldtype: "Section Break",
-				label: "Details",
+				label: __("Details"),
 			},
 
 			{
@@ -397,7 +397,7 @@ export class SidebarEditor {
 			{
 				fieldname: "display_depends_on",
 				fieldtype: "Code",
-				label: "Display Depends On (JS)",
+				label: __("Display Depends On (JS)"),
 				options: "JS",
 				max_height: "10px",
 			},
@@ -408,7 +408,7 @@ export class SidebarEditor {
 				fieldname: "route_options",
 				fieldtype: "Code",
 				display_depends_on: "eval: doc.link_type == 'Page'",
-				label: "Route Options",
+				label: __("Route Options"),
 				options: "JSON",
 				max_height: "50px",
 			},
@@ -429,7 +429,7 @@ export class SidebarEditor {
 		this.dialog = d = new frappe.ui.Dialog({
 			title: title,
 			fields: dialog_fields,
-			primary_action_label: "Save",
+			primary_action_label: __("Save"),
 			size: "small",
 			primary_action(values) {
 				if (me.filter_group) {

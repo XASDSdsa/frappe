@@ -12156,7 +12156,7 @@ msgstr "Frappe邮件站点"
 #. Type: Route
 #: frappe/hooks.py frappe/public/js/frappe/ui/toolbar/about.js:46
 msgid "Frappe Support"
-msgstr "Frappe支持"
+msgstr "Frappe 技术支持"
 
 #: frappe/public/js/frappe/legacy_gravatar_cleanup.js:18
 msgid ""
@@ -24094,7 +24094,7 @@ msgstr "重置LDAP密码"
 
 #: frappe/custom/doctype/customize_form/customize_form.js:137
 msgid "Reset Layout"
-msgstr "重置"
+msgstr "重置布局"
 
 #: frappe/core/doctype/user/user.js:230
 msgid "Reset OTP Secret"
@@ -35567,6 +35567,378 @@ msgstr "PATH中未找到{}！执行备份需要此组件"
 #: frappe/public/js/frappe/file_uploader/WebLink.vue:4
 msgid "← Back to upload files"
 msgstr "返回上传文件"
+
+#: frappe/public/js/frappe/ui/sidebar/sidebar_item.js
+msgid "Edit Item"
+msgstr "编辑菜单项"
+
+#: frappe/public/js/frappe/ui/sidebar/sidebar_item.js
+msgid "Add Item Below"
+msgstr "在下方添加菜单项"
+
+#: frappe/public/js/frappe/ui/sidebar/sidebar_item.js
+msgid "Add Nested Items"
+msgstr "添加子菜单项"
+
+#: frappe/public/js/frappe/utils/help_links.js
+msgid "Importing and Exporting Data"
+msgstr "数据导入与导出"
+
+#: frappe/public/js/frappe/utils/help_links.js
+msgid "Users and Permissions"
+msgstr "用户与权限"
+
+#: frappe/public/js/frappe/utils/help_links.js
+msgid "Data Management"
+msgstr "数据管理"
+
+#: frappe/public/js/frappe/utils/help_links.js
+msgid "Printing and Branding"
+msgstr "打印与品牌设置"
+
+#: frappe/public/js/frappe/utils/help_links.js
+msgid "Adding Users"
+msgstr "添加用户"
+
+#: frappe/public/js/frappe/utils/help_links.js
+msgid "Rename User"
+msgstr "重命名用户"
+
+#: frappe/public/js/frappe/utils/utils.js
+msgid "The referrer (e.g. google, newsletter)"
+msgstr "引荐来源（例如 Google、新闻简报）"
+
+#: frappe/public/js/frappe/utils/utils.js
+msgid "Marketing medium (e.g. cpc, banner, email)"
+msgstr "营销媒介（例如 CPC、横幅广告、电子邮件）"
+
+#: frappe/public/js/frappe/utils/utils.js
+msgid "Use to differentiate ad variants (e.g. A/B testing)"
+msgstr "用于区分广告版本（例如 A/B 测试）"
+
+#: frappe/public/js/frappe/views/communication.js
+msgid "Use Raw HTML email editor."
+msgstr "使用原始 HTML 邮件编辑器。"
+
+#: frappe/public/js/frappe/views/dashboard/dashboard_view.js
+msgid "Choose an existing chart or create a new chart"
+msgstr "选择现有图表或创建新图表"
+
+#: frappe/public/js/frappe/views/dashboard/dashboard_view.js
+msgid "Chart Label"
+msgstr "图表标签"
+
+#: frappe/public/js/frappe/views/dashboard/dashboard_view.js
+msgid "Chart Config"
+msgstr "图表配置"
+
+#: frappe/public/js/frappe/views/dashboard/dashboard_view.js
+msgid "Chart Color"
+msgstr "图表颜色"
+
+#: frappe/public/js/frappe/views/reports/query_report.js
+msgid "Type of Chart"
+msgstr "图表类型"
+
+#: frappe/public/js/frappe/views/reports/query_report.js
+msgid "Preview Chart"
+msgstr "预览图表"
+
+#: frappe/public/js/frappe/views/reports/query_report.js
+msgid "Chart Preview"
+msgstr "图表预览"
+
+#: frappe/public/js/frappe/views/reports/report_utils.js
+msgid "File Format"
+msgstr "文件格式"
+
+#: frappe/public/js/frappe/views/reports/report_utils.js
+msgid "CSV Delimiter"
+msgstr "CSV 分隔符"
+
+#: frappe/public/js/frappe/views/reports/report_utils.js
+msgid "CSV Quoting"
+msgstr "CSV 引用方式"
+
+#: frappe/public/js/frappe/views/reports/report_utils.js
+msgid "Minimal"
+msgstr "最少引用"
+
+#: frappe/public/js/frappe/views/reports/report_utils.js
+msgid "Non-numeric"
+msgstr "非数字值"
+
+#: frappe/public/js/frappe/views/reports/report_utils.js
+msgid "CSV Decimal Separator"
+msgstr "CSV 小数分隔符"
+
+#: frappe/public/js/frappe/views/reports/report_utils.js
+msgid "CSV Preview"
+msgstr "CSV 预览"
+
+#: frappe/public/js/frappe/views/workspace/blocks/block.js
+msgid "Delete Block"
+msgstr "删除区块"
+
+#: frappe/public/js/frappe/views/workspace/blocks/block.js
+msgid "Expand Block"
+msgstr "扩展区块"
+
+#: frappe/public/js/frappe/views/workspace/blocks/block.js
+msgid "Shrink"
+msgstr "收缩"
+
+#: frappe/public/js/frappe/views/workspace/blocks/block.js
+msgid "Shrink Block"
+msgstr "收缩区块"
+
+#: frappe/public/js/frappe/views/workspace/blocks/block.js
+msgid "Move Up"
+msgstr "上移"
+
+#: frappe/public/js/frappe/views/workspace/blocks/block.js
+msgid "Move Down"
+msgstr "下移"
+
+#: frappe/public/js/frappe/views/workspace/blocks/custom_block.js
+msgid "Custom Block"
+msgstr "自定义区块"
+
+#: frappe/public/js/frappe/views/workspace/blocks/onboarding.js
+msgid "Onboarding"
+msgstr "入门引导"
+
+#: frappe/public/js/frappe/views/workspace/blocks/quick_list.js
+msgid "Quick List"
+msgstr "快速列表"
+
+#: frappe/core/doctype/audit_trail/audit_trail.js
+msgid "Compare"
+msgstr "比较"
+
+#: frappe/core/doctype/role/role.js
+msgid "Show Users"
+msgstr "查看用户"
+
+#: frappe/core/doctype/user/user.js
+msgid "There's IP restriction for this user, you can not impersonate as this user."
+msgstr "该用户启用了 IP 限制，无法模拟登录为该用户。"
+
+#: frappe/core/doctype/user/user.js
+msgid "IP restriction is enabled"
+msgstr "已启用 IP 限制"
+
+#: frappe/core/doctype/user/user.js
+msgid "Reason for impersonating"
+msgstr "模拟登录原因"
+
+#: frappe/core/doctype/user_permission/user_permission_list.js
+msgid "Update User Permissions"
+msgstr "更新用户权限限制"
+
+#: frappe/core/report/database_storage_usage_by_tables/database_storage_usage_by_tables.js
+msgid "Optimize DocType"
+msgstr "优化单据类型"
+
+#: frappe/core/report/database_storage_usage_by_tables/database_storage_usage_by_tables.js
+msgid "Select a DocType"
+msgstr "选择单据类型"
+
+#: frappe/custom/doctype/customize_form/customize_form.js
+msgid "Reset To Defaults"
+msgstr "恢复默认设置"
+
+#: frappe/desk/doctype/kanban_board/kanban_board.js
+msgid "Show Board"
+msgstr "查看看板"
+
+#: frappe/desk/doctype/note/note.js frappe/desk/doctype/onboarding_step/onboarding_step.js
+msgid "Title of the Note"
+msgstr "备注标题"
+
+#: frappe/desk/doctype/note/note.js
+msgid "This is the name by which the note will be saved, you can change this later"
+msgstr "备注将以此名称保存，之后仍可修改"
+
+#: frappe/desk/doctype/note/note.js
+msgid "Sets the Note to Public"
+msgstr "将备注设为公开"
+
+#: frappe/desk/doctype/note/note.js
+msgid "You can change the visibility of the note with this, setting it to public will allow other users to view it."
+msgstr "可在此修改备注的可见性；设为公开后，其他用户也可查看。"
+
+#: frappe/desk/page/desktop/desktop.js
+msgid "Edit Layout"
+msgstr "编辑布局"
+
+#: frappe/desk/page/desktop/desktop.js
+msgid "Reset Desktop Layout"
+msgstr "重置桌面布局"
+
+#: frappe/desk/page/desktop/desktop.js
+msgid "Create Folder"
+msgstr "创建文件夹"
+
+#: frappe/desk/page/desktop/desktop.js
+msgid "Add To Folder"
+msgstr "添加到文件夹"
+
+#: frappe/public/js/billing.bundle.js
+msgid "{0} days"
+msgstr "{0} 天"
+
+#: frappe/public/js/billing.bundle.js
+msgid "{0} day"
+msgstr "{0} 天"
+
+#: frappe/public/js/billing.bundle.js
+msgid "Please upgrade for uninterrupted services"
+msgstr "请升级套餐以确保服务不中断"
+
+#: frappe/public/js/billing.bundle.js
+msgid "Please contact your system administrator to upgrade your plan."
+msgstr "请联系系统管理员升级套餐。"
+
+#: frappe/public/js/billing.bundle.js
+msgid "Your trial ends in {0}"
+msgstr "试用期将在 {0} 后结束"
+
+#: frappe/public/js/billing.bundle.js
+msgid "Upgrade"
+msgstr "升级"
+
+#: frappe/public/js/frappe/form/form.js
+msgid "Action {0} not found"
+msgstr "未找到操作 {0}"
+
+#: frappe/public/js/frappe/form/print_utils.js
+msgid "QZ Tray: {0}"
+msgstr "QZ Tray：{0}"
+
+#: frappe/public/js/frappe/form/workflow.js
+msgid "Workflow: {0}"
+msgstr "工作流：{0}"
+
+#: frappe/public/js/frappe/list/bulk_operations.js
+msgid "Removing assignments..."
+msgstr "正在移除分配任务……"
+
+#: frappe/public/js/frappe/microtemplate.js
+msgid "Template <b>{0}</b> not found."
+msgstr "未找到模板 <b>{0}</b>。"
+
+#: frappe/public/js/frappe/views/file/file_view.js
+msgid "File {0} moved to {1}"
+msgstr "文件 {0} 已移至 {1}"
+
+#: frappe/public/js/frappe/views/kanban/kanban_view.js
+msgid "Kanban Board {0} deleted."
+msgstr "看板 {0} 已删除。"
+
+#: frappe/public/js/frappe/views/reports/report_view.js
+msgid "Are you sure you want to delete this report?"
+msgstr "确定要删除此报表吗？"
+
+#: frappe/automation/doctype/assignment_rule/assignment_rule.js
+msgid "Owner"
+msgstr "所有者"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Web Requests"
+msgstr "Web 请求"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Record Web Requests"
+msgstr "记录 Web 请求"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Request path filter"
+msgstr "请求路径筛选条件"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "This filters the paths to record. Use it to avoid slowing down other traffic; for example, <code>/api/method/erpnext</code>. Leave it empty to record every request."
+msgstr "用于筛选需要记录的请求路径，以免拖慢其他流量；例如 <code>/api/method/erpnext</code>。留空则记录所有请求。"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Record Background Jobs"
+msgstr "记录后台任务"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Background Jobs filter"
+msgstr "后台任务筛选条件"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "This filters the background jobs to record. Use it to avoid slowing down other jobs; for example, <code>email_queue.pull</code>. Leave it empty to record every job."
+msgstr "用于筛选需要记录的后台任务，以免拖慢其他任务；例如 <code>email_queue.pull</code>。留空则记录所有任务。"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Record SQL queries"
+msgstr "记录 SQL 查询"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Generate EXPLAIN for SQL queries"
+msgstr "为 SQL 查询生成 EXPLAIN"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Capture callstack of SQL queries"
+msgstr "捕获 SQL 查询调用栈"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Document Events"
+msgstr "单据事件"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Capture document lifecycle timeline"
+msgstr "捕获单据生命周期时间线"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Records each document lifecycle method or <code>doc_events</code> handler that runs during the request, including its duration and the app that registered it."
+msgstr "记录请求期间运行的每个单据生命周期方法或 <code>doc_events</code> 处理程序，包括耗时和注册该处理程序的应用。"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Run cProfile"
+msgstr "运行 cProfile"
+
+#: frappe/core/doctype/recorder/recorder_list.js
+msgid "Warning: cProfile adds significant overhead. For best results, disable stack capturing when using cProfile."
+msgstr "警告：cProfile 会带来较大性能开销。使用 cProfile 时建议关闭调用栈捕获，以获得更准确的结果。"
+
+#: frappe/core/doctype/audit_trail/audit_trail.html
+msgid "Documents to Compare"
+msgstr "待比较单据"
+
+#: frappe/core/doctype/audit_trail/audit_trail.html
+msgid "Fields Changed"
+msgstr "已更改字段"
+
+#: frappe/core/doctype/audit_trail/audit_trail.html
+msgid "Rows Updated"
+msgstr "已更新行"
+
+#: frappe/public/js/print_format_builder/Preview.vue
+msgid "Generating preview..."
+msgstr "正在生成预览……"
+
+#: frappe/public/js/frappe/ui/sidebar/sidebar.html
+msgid "Add Sidebar Item"
+msgstr "添加侧栏菜单项"
+
+#: frappe/templates/includes/list/filters.html
+msgid "Results filtered by"
+msgstr "筛选结果："
+
+#: frappe/www/portal.html
+msgid "Welcome to the Portal"
+msgstr "欢迎访问门户"
+
+#: frappe/website/doctype/web_page/templates/web_page.html
+msgid "Discuss"
+msgstr "讨论"
+
+#: frappe/templates/doc.html
+msgid "On this page"
+msgstr "本页目录"
 
 #~ msgid "Alert"
 #~ msgstr "警报"

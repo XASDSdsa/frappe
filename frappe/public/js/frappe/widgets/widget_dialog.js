@@ -141,7 +141,7 @@ class ChartDialog extends WidgetDialog {
 			{
 				fieldtype: "Data",
 				fieldname: "label",
-				label: "Label",
+				label: __("Label"),
 			},
 		];
 	}
@@ -315,7 +315,7 @@ class CardDialog extends WidgetDialog {
 					{
 						fieldname: "icon",
 						fieldtype: "Icon",
-						label: "Icon",
+						label: __("Icon"),
 					},
 					{
 						fieldname: "dependencies",
@@ -792,7 +792,7 @@ class CustomBlockDialog extends WidgetDialog {
 			{
 				fieldtype: "Link",
 				fieldname: "custom_block_name",
-				label: "Custom Block Name",
+				label: __("Custom Block Name"),
 				options: "Custom HTML Block",
 				reqd: 1,
 				get_query: () => {
