@@ -58,6 +58,32 @@ def get_report_doc(report_name):
 	return doc
 
 
+@frappe.whitelist()
+def get_print_format_data(print_format: str):
+	pf = frappe.db.get_value(
+		"Print Format",
+		{"name": print_format, "disabled": 0, "print_format_for": "Report"},
+		["report", "html", "css"],
+		as_dict=True,
+	)
+	if not pf:
+		frappe.throw(
+			_("{0} is not an enabled Print Format for a Report").format(frappe.bold(print_format)),
+			frappe.DoesNotExistError,
+		)
+
+	# get_report_doc enforces the referenced Report's own permission model before we hand out its print format
+	report = get_report_doc(pf.report)
+
+	if not frappe.has_permission(report.ref_doctype, "print"):
+		frappe.throw(
+			_("You don't have permission to print: {0}").format(_(report.ref_doctype)),
+			frappe.PermissionError,
+		)
+
+	return {"html": pf.html, "css": pf.css}
+
+
 def get_report_result(report, filters):
 	res = None
 
@@ -866,7 +892,7 @@ def save_report(reference_report: str, report_name: str, columns: str, filters: 
 
 	if docname:
 		report = frappe.get_doc("Report", docname)
-		existing_jd = json.loads(report.json)
+		existing_jd = frappe.parse_json(report.json or "{}")
 		existing_jd["columns"] = json.loads(columns)
 		existing_jd["filters"] = json.loads(filters)
 		report.update({"json": json.dumps(existing_jd, separators=(",", ":"))})
