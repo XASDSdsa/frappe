@@ -367,18 +367,23 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		this.show_restricted_list_indicator_if_applicable();
 	}
 
-	refresh_columns(meta, list_view_settings) {
+	async refresh_columns(meta, list_view_settings) {
 		this.meta = meta;
 		this.tags_shown = list_view_settings?.show_tags;
 		this.list_view_settings = list_view_settings;
 
+		this.column_max_widths = {};
 		this.setup_columns();
-		this.refresh();
+		await this.setup_fields();
+		this.render_header(true);
+		this.last_args = null;
+		return this.refresh();
 	}
 
 	refresh(refresh_header = false) {
 		return super.refresh().then(() => {
 			this.render_header(refresh_header);
+			if (this.view_name === "List") this.apply_column_widths();
 			this.render_count();
 			this.update_checkbox();
 			this.update_url_with_filters();
@@ -408,11 +413,31 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		this.$result.append(this.$freeze);
 	}
 
+	get_additional_columns() {
+		// Display-only columns are kept separate from DocFields, filters and SQL fields.
+		if (this.view_name !== "List") return [];
+		return (this.settings.additional_columns || []).filter(
+			(df) =>
+				/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(df.fieldname) &&
+				!frappe.model.std_fields_list.includes(df.fieldname) &&
+				df.fieldname !== "status_field" &&
+				!this.meta.fields.some((field) => field.fieldname === df.fieldname)
+		);
+	}
+
+	get_column_docfield(fieldname) {
+		return (
+			this.meta.fields.find((df) => df.fieldname === fieldname) ||
+			this.get_additional_columns().find((df) => df.fieldname === fieldname) ||
+			frappe.meta.get_docfield(this.doctype, fieldname)
+		);
+	}
+
 	setup_columns() {
 		// setup columns for list view
 		this.columns = [];
 
-		const get_df = frappe.meta.get_docfield.bind(null, this.doctype);
+		const get_df = this.get_column_docfield.bind(this);
 
 		// 1st column: title_field or name
 		if (this.meta.title_field) {
@@ -424,7 +449,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 			this.columns.push({
 				type: "Subject",
 				df: {
-					label: __("ID"),
+					label: "ID",
 					fieldname: "name",
 				},
 			});
@@ -435,6 +460,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 			// indicator
 			this.columns.push({
 				type: "Status",
+				df: { fieldname: "status_field", label: "Status", fieldtype: "Data" },
 			});
 		}
 
@@ -456,6 +482,15 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 					df,
 				}))
 		);
+
+		for (const df of this.get_additional_columns()) {
+			const saved_fields = this.list_view_settings.fields;
+			if (!saved_fields && !df.in_list_view) continue;
+			const column = { type: "Field", df, additional: true };
+			const index = this.columns.findIndex((col) => col.df?.fieldname === df.insert_after);
+			if (index >= 0) this.columns.splice(index + 1, 0, column);
+			else this.columns.push(column);
+		}
 
 		if (this.list_view_settings.fields) {
 			this.columns = this.reorder_listview_fields();
@@ -488,7 +523,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 			this.columns.push({
 				type: "Field",
 				df: {
-					label: __("ID"),
+					label: "ID",
 					fieldname: "name",
 				},
 			});
@@ -780,7 +815,10 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 					const fieldname = col.df?.fieldname;
 					const label = __(col.df?.label || col.type, null, col.df?.parent);
 					const title = __("Click to sort by {0}", [label]);
-					const attrs = fieldname ? `data-sort-by="${fieldname}" title="${title}"` : "";
+					const attrs =
+						fieldname && !col.additional && col.type !== "Status"
+							? `data-sort-by="${fieldname}" title="${title}"`
+							: "";
 					html = `<span ${attrs}>${label}</span>`;
 				}
 
@@ -909,7 +947,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		if (col.type === "Status" || col.df?.options == "Workflow State") {
 			let show_workflow_state = col.df?.options == "Workflow State";
 			return `
-				<div class="list-row-col hidden-xs ellipsis">
+				<div class="list-row-col hidden-xs ellipsis" data-fieldname="${col.df?.fieldname || "status_field"}">
 					${this.get_indicator_html(doc, show_workflow_state)}
 				</div>
 			`;
@@ -931,7 +969,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		const label = df.label;
 		const fieldname = df.fieldname;
 		const link_title_fieldname = this.link_field_title_fields[fieldname];
-		const value = doc[fieldname] || "";
+		const value = col.additional ? doc[fieldname] : doc[fieldname] || "";
 		let value_display = link_title_fieldname
 			? doc[fieldname + "_" + link_title_fieldname] || value
 			: value;
@@ -955,6 +993,9 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		};
 
 		const field_html = () => {
+			if (col.additional) {
+				return `<span class="ellipsis">${format()}</span>`;
+			}
 			let html;
 			let _value;
 			let strip_html_required =
@@ -1075,21 +1116,30 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		`;
 	}
 
-	/**
-	 * Applies dynamically calculated widths to elements based on their respective class names.
-	 * Iterates through `column_max_widths` and sets the `width` and `flex` styles for each column.
-	 * The width for each column is applied as both a fixed `width` and a flexible `flex` property.
-	 */
+	// A saved width is exact; an empty width retains native automatic sizing.
 	apply_column_widths() {
-		if (this.list_view_settings?.disable_scrolling) return;
-		Object.entries(this.column_max_widths).forEach(([fieldname, width]) => {
-			$(
-				`.list-view .frappe-list .result .level-left .list-row-col[data-fieldname="${fieldname}"]`
-			).css({
-				width: width,
-				flex: `1 0 ${width}px`,
-			});
-		});
+		const $cells = this.$result.find(".level-left .list-row-col[data-fieldname]");
+		$cells.css({ width: "", flex: "", minWidth: "", maxWidth: "" });
+		if (frappe.is_mobile()) return;
+
+		const saved_fields = this.list_view_settings?.fields
+			? JSON.parse(this.list_view_settings.fields)
+			: null;
+		for (const col of this.columns) {
+			const fieldname = col.df?.fieldname;
+			if (!fieldname) continue;
+			const saved = saved_fields?.find((field) => field.fieldname === fieldname);
+			const width = Number(saved_fields ? saved?.width : col.additional ? col.df.width : 0);
+			const $column = $cells.filter((_, cell) => cell.dataset.fieldname === fieldname);
+			if (Number.isInteger(width) && width >= 60 && width <= 1200) {
+				$column.css({ width, flex: `0 0 ${width}px`, minWidth: width, maxWidth: width });
+			} else if (!this.list_view_settings?.disable_scrolling) {
+				const automatic_width = this.column_max_widths[fieldname];
+				if (automatic_width) {
+					$column.css({ width: automatic_width, flex: `1 0 ${automatic_width}px` });
+				}
+			}
+		}
 	}
 
 	update_listview_classes(has_assignto, assign_to_count) {
