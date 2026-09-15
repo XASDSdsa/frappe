@@ -42,6 +42,8 @@ export default class ListSettings {
 			if (!me.update_fields()) return;
 			let values = me.dialog.get_values();
 			if (!values) return;
+			// Control.set_value is asynchronous; submit the just-read inputs directly.
+			values.fields = JSON.stringify(me.fields);
 
 			frappe.show_alert({
 				message: __("Saving"),

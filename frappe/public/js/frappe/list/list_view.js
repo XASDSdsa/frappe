@@ -375,9 +375,8 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		this.column_max_widths = {};
 		this.setup_columns();
 		await this.setup_fields();
-		this.render_header(true);
 		this.last_args = null;
-		return this.refresh();
+		return this.refresh(true);
 	}
 
 	refresh(refresh_header = false) {

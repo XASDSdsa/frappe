@@ -64,6 +64,35 @@ function fixture() {
 	return { view, frappe, ListSettings: context.ListSettings };
 }
 
+test("save submits the current width before the hidden control finishes updating", async () => {
+	const { ListSettings, frappe } = fixture();
+	let stored = JSON.stringify([{ fieldname: "amount" }]);
+	let request;
+	let save;
+	const rows = [{
+		getAttribute: (key) => ({ "data-fieldname": "amount", "data-label": "Amount" })[key],
+		querySelector: () => ({ value: "240", checkValidity: () => true }),
+	}];
+	rows.item = (i) => rows[i];
+	frappe.get_meta = () => ({ fields: [] });
+	frappe.show_alert = () => {};
+	frappe.call = (options) => { request = options.args; };
+	frappe.ui = { Dialog: class {
+		set_values() {}
+		set_primary_action(label, action) { save = action; }
+		get_field() { return { $wrapper: [{ getElementsByClassName: () => rows }] }; }
+		set_value(key, value) { return Promise.resolve().then(() => { stored = value; }); }
+		get_values() { return { fields: stored }; }
+	} };
+	const settings = Object.assign(Object.create(ListSettings.prototype), {
+		doctype: "Example", settings: {}, field_settings: {},
+	});
+	settings.make();
+	save();
+	assert.equal(JSON.parse(request.listview_settings.fields)[0].width, 240);
+	await Promise.resolve();
+});
+
 test("display-only columns use native order without becoming query fields or shared metadata", async () => {
 	const { view } = fixture();
 	assert.deepEqual(Array.from(view.columns, (col) => col.df?.fieldname).filter(Boolean), [
