@@ -336,6 +336,7 @@ frappe.views.ReportView = class ReportView extends frappe.views.ListView {
 	}
 
 	setup_datatable(values) {
+		this.cleanup_datatable_resize?.();
 		this.$datatable_wrapper.empty();
 		this.datatable = new DataTable(this.$datatable_wrapper[0], {
 			columns: this.columns,
@@ -437,7 +438,39 @@ frappe.views.ReportView = class ReportView extends frappe.views.ListView {
 			],
 		});
 
+		this.setup_datatable_resize_observer();
 		this.setup_inline_filter_observer();
+	}
+
+	setup_datatable_resize_observer() {
+		const datatable = this.datatable;
+		const wrapper = this.$datatable_wrapper[0];
+		let width = 0;
+		let frame;
+		const observer = new ResizeObserver(([entry]) => {
+			const next_width = entry.contentRect.width;
+			if (next_width === width) return;
+			width = next_width;
+			cancelAnimationFrame(frame);
+			if (width <= 0) return;
+
+			frame = requestAnimationFrame(() => {
+				if (
+					this.datatable === datatable &&
+					wrapper.isConnected &&
+					wrapper.getClientRects().length
+				) {
+					// Fixed-layout tables do not update their body width on window resize.
+					datatable.setDimensions();
+				}
+			});
+		});
+		this.cleanup_datatable_resize = () => {
+			observer.disconnect();
+			cancelAnimationFrame(frame);
+		};
+		datatable.on("onDestroy", this.cleanup_datatable_resize);
+		observer.observe(wrapper);
 	}
 
 	setup_inline_filter_observer() {
