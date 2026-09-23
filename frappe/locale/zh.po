@@ -913,7 +913,7 @@ msgstr "同名文件 {} 已存在"
 
 #: frappe/core/doctype/file/file.py:124 frappe/core/doctype/file/file.py:176
 msgid "A folder cannot have a File URL"
-msgstr ""
+msgstr "文件夹不能设置文件 URL"
 
 #. Description of the 'Scopes' (Text) field in DocType 'OAuth Client'
 #: frappe/integrations/doctype/oauth_client/oauth_client.json
@@ -3450,7 +3450,7 @@ msgstr "授权码"
 
 #: frappe/integrations/oauth2.py:98
 msgid "Authorization POST requests must use application/x-www-form-urlencoded"
-msgstr ""
+msgstr "授权 POST 请求必须使用 application/x-www-form-urlencoded 格式"
 
 #. Label of the authorization_uri (Small Text) field in DocType 'Connected
 #. App'
@@ -3607,7 +3607,7 @@ msgstr "自动重复失败。请在解决问题后重新启用自动重复。"
 
 #: frappe/automation/doctype/auto_repeat/auto_repeat.py:244
 msgid "Auto repeat skipped. The owner cannot access the reference document."
-msgstr ""
+msgstr "已跳过自动重复：所有者无权访问引用单据。"
 
 #. Option for the 'Type' (Select) field in DocType 'DocField'
 #. Option for the 'Field Type' (Select) field in DocType 'Custom Field'
@@ -5099,7 +5099,7 @@ msgstr "勾选需展示列，拖拽调整顺序"
 
 #: frappe/public/js/frappe/microtemplate.js:256
 msgid "Check the Error Log for details."
-msgstr ""
+msgstr "请查看错误日志了解详情。"
 
 #: frappe/automation/doctype/auto_repeat/auto_repeat.py:503
 msgid "Check the Error Log for more information: {0}"
@@ -6361,7 +6361,7 @@ msgstr "找不到{0}"
 
 #: frappe/public/js/frappe/microtemplate.js:223
 msgid "Could not generate PDF"
-msgstr ""
+msgstr "无法生成 PDF"
 
 #: frappe/core/doctype/data_import/importer.py:952
 msgid "Could not map column {0} to field {1}"
@@ -11442,7 +11442,7 @@ msgstr "第{2}行中的字段类型不能从{0}更改为{1}"
 
 #: frappe/custom/doctype/custom_field/custom_field.py:199
 msgid "Fieldtype of {0} in {1} cannot be changed from {2} to {3}"
-msgstr ""
+msgstr "{1} 中字段 {0} 的类型不能从 {2} 更改为 {3}"
 
 #. Name of a DocType
 #. Option for the 'Select List View' (Select) field in DocType 'Form Tour'
@@ -12545,7 +12545,7 @@ msgstr "生成跟踪URL"
 
 #: frappe/public/js/frappe/microtemplate.js:247
 msgid "Generating PDF..."
-msgstr ""
+msgstr "正在生成 PDF…"
 
 #. Option for the 'Provider' (Select) field in DocType 'Geolocation Settings'
 #: frappe/integrations/doctype/geolocation_settings/geolocation_settings.json
@@ -15097,7 +15097,7 @@ msgstr "URL无效"
 
 #: frappe/utils/file_manager.py:237
 msgid "Invalid Upload"
-msgstr ""
+msgstr "上传无效"
 
 #: frappe/email/receive.py:160
 msgid "Invalid User Name or Support Password. Please rectify and try again."
@@ -15128,7 +15128,7 @@ msgstr "无效聚合函数"
 
 #: frappe/desk/reportview.py:237 frappe/desk/reportview.py:240
 msgid "Invalid aggregate function: {0}"
-msgstr ""
+msgstr "无效的聚合函数：{0}"
 
 #: frappe/database/query.py:2449
 msgid "Invalid alias format: {0}. Alias must be a simple identifier."
@@ -15218,7 +15218,7 @@ msgstr "编号规则中字段名“{0}”无效"
 
 #: frappe/utils/file_manager.py:237
 msgid "Invalid file name"
-msgstr ""
+msgstr "文件名无效"
 
 #: frappe/deprecation_dumpster.py:283
 msgid "Invalid file path: {0}"
@@ -20303,7 +20303,7 @@ msgstr "仅被分配者可完成此待办事项。"
 msgid ""
 "Only users with one of these roles can send SMS. Leave empty to allow only "
 "System Manager."
-msgstr ""
+msgstr "只有拥有以下任一角色的用户才能发送短信。留空时仅允许系统管理员发送。"
 
 #: frappe/email/doctype/auto_email_report/auto_email_report.py:108
 msgid "Only {0} emailed reports are allowed per user."
@@ -29344,7 +29344,7 @@ msgstr ""
 msgid ""
 "The report may be too large to render in a single request. Narrow the "
 "filters and try again, or use Print and save as PDF from your browser."
-msgstr ""
+msgstr "报表可能过大，无法在单次请求中生成。请缩小筛选范围后重试，或使用浏览器的打印功能另存为 PDF。"
 
 #: frappe/desk/utils.py:112
 msgid ""
@@ -29357,7 +29357,7 @@ msgstr ""
 #: frappe/public/js/frappe/microtemplate.js:286
 msgid ""
 "The request could not be completed. Check your connection and try again."
-msgstr ""
+msgstr "无法完成请求。请检查网络连接后重试。"
 
 #: frappe/core/doctype/user/user.py:1068
 msgid "The reset password link has been expired"
@@ -32365,7 +32365,7 @@ msgstr "访问者ID"
 #: frappe/utils/synchronization.py:48
 msgid ""
 "Wait for it to finish. Deleting the lock file {} will not release the lock."
-msgstr ""
+msgstr "请等待操作完成。删除锁文件 {} 不会释放锁。"
 
 #: frappe/templates/discussions/reply_section.html:39
 msgid "Want to discuss?"
@@ -33483,7 +33483,7 @@ msgstr "您无权访问此资源。请登录后访问"
 
 #: frappe/core/doctype/sms_settings/sms_settings.py:80
 msgid "You are not permitted to send SMS"
-msgstr ""
+msgstr "您无权发送短信"
 
 #: frappe/public/js/frappe/form/sidebar/document_follow.js:128
 msgid ""
@@ -33736,7 +33736,7 @@ msgstr "您无权查看 {0} 的报表"
 
 #: frappe/desk/query_report.py:80
 msgid "You don't have permission to print: {0}"
-msgstr ""
+msgstr "您无权打印：{0}"
 
 #: frappe/utils/file_manager.py:424
 msgid "You don't have permission to read/attach the file {0}."
@@ -34846,19 +34846,19 @@ msgstr "Vim编辑器"
 
 #: frappe/desk/form/activity.py:96
 msgid "visible_types entries must be strings or {type: [fields]} maps"
-msgstr ""
+msgstr "visible_types 中的条目必须为字符串或 {type: [fields]} 映射"
 
 #: frappe/desk/form/activity.py:91
 msgid "visible_types fields for {0} must be a list"
-msgstr ""
+msgstr "visible_types 中 {0} 的字段必须为列表"
 
 #: frappe/desk/form/activity.py:77
 msgid "visible_types is not valid JSON: {0}"
-msgstr ""
+msgstr "visible_types 不是有效的 JSON：{0}"
 
 #: frappe/desk/form/activity.py:81
 msgid "visible_types must be a list"
-msgstr ""
+msgstr "visible_types 必须为列表"
 
 #. Option for the 'Code Editor Type' (Select) field in DocType 'User'
 #: frappe/core/doctype/user/user.json
@@ -35233,7 +35233,7 @@ msgstr "行{1}中的{0}不能同时有URL和子项"
 
 #: frappe/model/delete_doc.py:102
 msgid "{0} is a Virtual DocType and must implement its own delete() method."
-msgstr ""
+msgstr "{0} 是虚拟单据类型，必须实现自己的 delete() 方法。"
 
 #: frappe/desk/doctype/notification_type/notification_type.py:42
 msgid ""
@@ -35408,7 +35408,7 @@ msgstr "{0} 不是 {1} 的上级节点"
 
 #: frappe/desk/query_report.py:71
 msgid "{0} is not an enabled Print Format for a Report"
-msgstr ""
+msgstr "{0} 不是已启用的报表打印格式"
 
 #: frappe/public/js/frappe/form/controls/link.js:694
 #: frappe/public/js/frappe/views/reports/report_view.js:1537
