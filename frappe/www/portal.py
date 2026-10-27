@@ -1,10 +1,11 @@
 import json
+from urllib.parse import quote
 
 import frappe
-from frappe import _, cint
+from frappe import _, cint, cstr
 from frappe.model.document import Document
 from frappe.utils.data import quoted
-from frappe.www.list import get_list_context, get_list_data
+from frappe.www.list import get_list_context, get_list_data_for_context
 
 no_cache = 1
 
@@ -18,8 +19,9 @@ def get_context(context, **dict_params):
 		if frappe.session.user == "Guest" and not meta.allow_guest_to_view:
 			frappe.throw(_("Login to view"), frappe.PermissionError)
 		context.meta = meta
-		context.update(get_list_context(context, doctype) or {})
-		context.update(get(**frappe.local.form_dict))
+		list_context = get_list_context(frappe._dict(), doctype, frappe.local.form_dict.web_form_name)
+		context.update(list_context)
+		context.update(get(list_context, **frappe.local.form_dict))
 		context.home_page = "/portal"
 		context.doctype = frappe.local.form_dict.doctype
 	return context
@@ -28,15 +30,19 @@ def get_context(context, **dict_params):
 def set_route(context):
 	"""Set link for the list item"""
 	if context.web_form_name:
-		context.route = f"{context.pathname}?name={quoted(context.doc.name)}"
+		context.route = f"{context.pathname}?name={quote(cstr(context.doc.name), safe='')}"
 	elif context.doc and getattr(context.doc, "route", None):
 		context.route = context.doc.route
 	else:
-		context.route = f"{context.pathname or quoted(context.doc.doctype)}/{quoted(context.doc.name)}"
+		context.route = (
+			f"{context.pathname or quoted(context.doc.doctype)}/{quote(cstr(context.doc.name), safe='')}"
+		)
 
 
 def get(
-	doctype: str,
+	list_context=None,
+	/,
+	doctype: str | None = None,
 	txt: str | None = None,
 	limit_start: int = 0,
 	limit: int = 20,
@@ -45,16 +51,18 @@ def get(
 ):
 	"""Return processed HTML page for a standard listing."""
 	limit_start = cint(limit_start)
-	raw_result = get_list_data(doctype, txt, limit_start, limit=limit + 1, **kwargs)
+	if list_context is None:
+		list_context = get_list_context(frappe._dict(), doctype, kwargs.get("web_form_name"))
+
+	raw_result = get_list_data_for_context(list_context, doctype, txt, limit_start, limit=limit + 1, **kwargs)
 	show_more = len(raw_result) > limit
 	if show_more:
 		raw_result = raw_result[:-1]
 
 	meta = frappe.get_meta(doctype)
-	list_context = frappe.flags.list_context
 
 	if not raw_result:
-		return {"result": []}
+		return {"result": [], "txt": txt}
 
 	if txt:
 		list_context.default_subtitle = _('Filtered by "{0}"').format(txt)
@@ -86,4 +94,5 @@ def get(
 		"result": result,
 		"show_more": show_more,
 		"next_start": limit_start + limit,
+		"txt": txt,
 	}

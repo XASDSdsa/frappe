@@ -10,7 +10,6 @@ from typing import Any, ClassVar, Literal
 
 import xlrd
 import xlsxwriter
-from openpyxl import load_workbook
 from xlsxwriter.format import Format
 
 import frappe
@@ -18,6 +17,7 @@ from frappe import _
 from frappe.core.utils import html2text
 from frappe.utils import cint
 from frappe.utils.csvutils import FORMULA_TRIGGER_CHARS
+from frappe.utils.data import get_currency_precision
 from frappe.utils.html_utils import unescape_html
 
 ILLEGAL_CHARACTERS_RE = re.compile(
@@ -367,7 +367,7 @@ class XLSXStyleBuilder:
 
 	@staticmethod
 	def _get_currency_symbol_info(currency: str | None) -> tuple[str, bool]:
-		if not currency or frappe.db.get_default("hide_currency_symbol") == "Yes":
+		if not currency or frappe.db.get_default("hide_currency_symbol") in ("1", "Yes"):
 			return "", False
 
 		symbol, on_right = frappe.db.get_value("Currency", currency, ["symbol", "symbol_on_right"])
@@ -404,7 +404,8 @@ class XLSXStyleBuilder:
 		precision = number_format.precision
 
 		if fieldtype == "Currency":
-			precision = cint(frappe.db.get_default("currency_precision")) or precision
+			currency_precision = get_currency_precision()
+			precision = currency_precision if currency_precision is not None else precision
 			format_str = XLSXStyleBuilder._build_number_format(thousands_sep, precision)
 			currency_symbol, symbol_on_right = XLSXStyleBuilder._get_currency_symbol_info(currency)
 			return XLSXStyleBuilder._build_currency_format(format_str, currency_symbol, symbol_on_right)
@@ -649,6 +650,8 @@ def read_xlsx_file_from_attached_file(file_url=None, fcontent=None, filepath=Non
 		filename = filepath
 	else:
 		return
+
+	from openpyxl import load_workbook
 
 	rows = []
 	wb1 = load_workbook(filename=filename, data_only=True, read_only=read_only)

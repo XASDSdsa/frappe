@@ -18,6 +18,7 @@ class SystemSettings(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		agent_instructions: DF.LongText | None
 		allow_clearing_link_fields: DF.Check
 		allow_consecutive_login_attempts: DF.Int
 		allow_error_traceback: DF.Check
@@ -52,6 +53,7 @@ class SystemSettings(Document):
 		dormant_days: DF.Int
 		email_footer_address: DF.SmallText | None
 		email_retry_limit: DF.Int
+		enable_mcp: DF.Check
 		enable_onboarding: DF.Check
 		enable_password_policy: DF.Check
 		enable_scheduler: DF.Check
@@ -101,6 +103,7 @@ class SystemSettings(Document):
 		reset_password_link_expiry_duration: DF.Duration | None
 		reset_password_template: DF.Link | None
 		rounding_method: DF.Literal["Banker's Rounding (legacy)", "Banker's Rounding", "Commercial Rounding"]
+		server_name: DF.Data | None
 		session_expiry: DF.Data | None
 		setup_complete: DF.Check
 		show_absolute_datetime_in_timeline: DF.Check
@@ -248,12 +251,11 @@ def load():
 	if "System Manager" not in frappe.get_roles():
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
-	all_defaults = frappe.db.get_defaults()
 	defaults = {}
 
 	for df in frappe.get_meta("System Settings").get("fields"):
 		if df.fieldtype in ("Select", "Data"):
-			defaults[df.fieldname] = all_defaults.get(df.fieldname)
+			defaults[df.fieldname] = get_system_settings(df.fieldname)
 
 	return {"timezones": get_all_timezones(), "defaults": defaults}
 

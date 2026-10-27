@@ -14,6 +14,8 @@ from frappe.twofactor import (
 	confirm_otp_token,
 	get_cached_user_pass,
 	get_default,
+	get_email_body_for_2fa,
+	get_email_body_for_qr_code,
 	get_otpsecret_for_,
 	get_verification_obj,
 	process_2fa_for_email,
@@ -66,6 +68,13 @@ class TestTwoFactor(IntegrationTestCase):
 		self.assertFalse(verification_obj["setup"])
 		self.assertFalse(verification_obj["prompt"])
 
+	def test_2fa_email_bodies_render(self):
+		code_body = get_email_body_for_2fa({"otp": "123456", "otp_issuer": "Frappe"})
+		self.assertIn("123456", code_body)
+
+		qr_body = get_email_body_for_qr_code({"qrcode_link": "https://example.com/qrcode/abc"})
+		self.assertIn("https://example.com/qrcode/abc", qr_body)
+
 	def test_authenticate_for_2factor(self):
 		"""Verification obj and tmp_id should be set in frappe.local."""
 		authenticate_for_2factor(self.user)
@@ -74,7 +83,9 @@ class TestTwoFactor(IntegrationTestCase):
 		self.assertTrue(verification_obj)
 		self.assertTrue(tmp_id)
 		for k in ["_usr", "_pwd", "_otp_secret"]:
-			self.assertTrue(frappe.cache.get(f"{tmp_id}{k}"), f"{k} not available")
+			self.assertTrue(
+				frappe.cache.get_value(f"{tmp_id}{k}", use_local_cache=False), f"{k} not available"
+			)
 
 	def test_two_factor_is_enabled(self):
 		"""

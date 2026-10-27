@@ -6,10 +6,21 @@ frappe.provide("frappe.search");
 
 frappe.ui.toolbar.Toolbar = class {
 	constructor() {
+		let current_announcement = frappe.boot.navbar_settings.announcement_widget;
+
+		if (
+			current_announcement &&
+			current_announcement != localStorage.getItem("announcement_widget")
+		) {
+			localStorage.removeItem("dismissed_announcement_widget");
+			localStorage.setItem("announcement_widget", current_announcement);
+		}
+
 		if (
 			frappe.boot.read_only ||
 			frappe.boot.user.impersonated_by ||
-			(!localStorage.getItem("dismissed_announcement_widget") &&
+			((!localStorage.getItem("dismissed_announcement_widget") ||
+				!frappe.boot.navbar_settings.dismissible_announcement_widget) &&
 				strip_html(frappe.boot.navbar_settings.announcement_widget) != "") ||
 			frappe.is_mobile()
 		) {
@@ -26,7 +37,6 @@ frappe.ui.toolbar.Toolbar = class {
 
 		this.setup_help();
 
-		this.setup_read_only_mode();
 		this.setup_announcement_widget();
 		this.make();
 	}
@@ -39,6 +49,12 @@ frappe.ui.toolbar.Toolbar = class {
 	}
 
 	setup_help() {
+		// Global Search (⌘G / Ctrl+G) is independent of the help/notifications UI,
+		// so its dialog is initialised before the early-return that skips help setup.
+		this.search = new frappe.search.SearchDialog();
+		frappe.provide("frappe.searchdialog");
+		frappe.searchdialog.search = this.search;
+
 		if (!frappe.boot.desk_settings.notifications) {
 			// hide the help section
 			$(".navbar .vertical-bar").removeClass("d-sm-block");
@@ -47,10 +63,6 @@ frappe.ui.toolbar.Toolbar = class {
 		}
 		frappe.provide("frappe.help");
 		frappe.help.show_results = show_results;
-
-		this.search = new frappe.search.SearchDialog();
-		frappe.provide("frappe.searchdialog");
-		frappe.searchdialog.search = this.search;
 
 		$(".dropdown-help .dropdown-toggle").on("click", function () {
 			$(".dropdown-help input").focus();
@@ -153,25 +165,10 @@ frappe.ui.toolbar.Toolbar = class {
 		});
 	}
 
-	setup_read_only_mode() {
-		if (!frappe.boot.read_only) return;
-
-		$("header .read-only-banner").tooltip({
-			delay: { show: 600, hide: 100 },
-			trigger: "hover",
-		});
-	}
-
 	setup_announcement_widget() {
 		let current_announcement = frappe.boot.navbar_settings.announcement_widget;
 
 		if (!current_announcement) return;
-
-		// If an unseen announcement is added, overlook dismiss flag
-		if (current_announcement != localStorage.getItem("announcement_widget")) {
-			localStorage.removeItem("dismissed_announcement_widget");
-			localStorage.setItem("announcement_widget", current_announcement);
-		}
 
 		// When an announcement is closed, add dismiss flag
 		if (!localStorage.getItem("dismissed_announcement_widget")) {
@@ -199,7 +196,10 @@ $.extend(frappe.ui.toolbar, {
 		}
 
 		return $(
-			'<li class="custom-menu"><a><i class="fa-fw ' + icon + '"></i> ' + label + "</a></li>"
+			'<li class="custom-menu"><a>' +
+				(icon ? frappe.utils.icon(icon) + " " : "") +
+				label +
+				"</a></li>"
 		)
 			.insertBefore(menu.find(".divider"))
 			.find("a")
@@ -223,7 +223,7 @@ $.extend(frappe.ui.toolbar, {
 			true
 		)}" aria-haspopup="true" aria-expanded="true">
 				<div>
-					<i class="octicon ${icon}"></i>
+					${frappe.utils.icon(icon, "sm")}
 				</div>
 			</a>
 		</li>`).get(0);
@@ -290,24 +290,12 @@ frappe.ui.toolbar.fetch_session_defaults = function () {
 frappe.ui.toolbar.setup_session_defaults = function () {
 	let perms = frappe.perm.get_perm("Session Default Settings");
 	let fields = [...frappe.boot.session_defaults];
-	//add settings button only if user is a System Manager or has permission on 'Session Default Settings'
-	if (frappe.user_roles.includes("System Manager") || perms[0].read == 1) {
-		fields[fields.length] = {
-			fieldname: "settings",
-			fieldtype: "Button",
-			label: __("Settings"),
-			click: () => {
-				frappe.set_route("Form", "Session Default Settings", "Session Default Settings");
-			},
-		};
-	}
-	frappe.prompt(
+	let d = frappe.prompt(
 		fields,
 		function (values) {
-			//if default is not set for a particular field in prompt
-			fields.forEach(function (d) {
-				if (!values[d.fieldname]) {
-					values[d.fieldname] = "";
+			fields.forEach(function (field) {
+				if (!values[field.fieldname]) {
+					values[field.fieldname] = "";
 				}
 			});
 			frappe.call({
@@ -334,4 +322,10 @@ frappe.ui.toolbar.setup_session_defaults = function () {
 		__("Session Defaults"),
 		__("Save")
 	);
+	if (frappe.user_roles.includes("System Manager") || perms[0].read == 1) {
+		d.add_custom_action(__("Configure"), () => {
+			d.hide();
+			frappe.set_route("Form", "Session Default Settings", "Session Default Settings");
+		});
+	}
 };

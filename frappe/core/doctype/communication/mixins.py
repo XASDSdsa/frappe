@@ -200,7 +200,15 @@ class CommunicationEmailMixin:
 			)
 		return self._incoming_email_account
 
-	def mail_attachments(self, print_format=None, print_html=None, print_language=None):
+	def mail_attachments(
+		self,
+		print_format=None,
+		print_html=None,
+		print_language=None,
+		letterhead=None,
+		print_style=None,
+		print_settings=None,
+	):
 		final_attachments = []
 
 		if print_format or print_html:
@@ -211,7 +219,12 @@ class CommunicationEmailMixin:
 				"doctype": self.reference_doctype,
 				"name": self.reference_name,
 				"lang": print_language or frappe.local.lang,
+				"letterhead": letterhead,
 			}
+			if print_style:
+				d["style"] = print_style
+			if print_settings:
+				d["settings"] = print_settings
 			final_attachments.append(d)
 
 		final_attachments.extend({"fid": a["name"]} for a in self.get_attachments() or [])
@@ -272,10 +285,13 @@ class CommunicationEmailMixin:
 		print_format=None,
 		send_me_a_copy=None,
 		print_letterhead=None,
+		letterhead=None,
 		is_inbound_mail_communcation=None,
 		print_language=None,
 		raw_html=False,
 		add_css=True,
+		print_style=None,
+		print_settings=None,
 	) -> dict:
 		outgoing_email_account = self.get_outgoing_email_account()
 		if not outgoing_email_account:
@@ -293,7 +309,12 @@ class CommunicationEmailMixin:
 			return {}
 
 		final_attachments = self.mail_attachments(
-			print_format=print_format, print_html=print_html, print_language=print_language
+			print_format=print_format,
+			print_html=print_html,
+			print_language=print_language,
+			letterhead=letterhead,
+			print_style=print_style,
+			print_settings=print_settings,
 		)
 		incoming_email_account = self.get_incoming_email_account()
 
@@ -336,20 +357,26 @@ class CommunicationEmailMixin:
 		print_format=None,
 		send_me_a_copy=None,
 		print_letterhead=None,
+		letterhead=None,
 		is_inbound_mail_communcation=None,
 		print_language=None,
 		now=False,
 		raw_html=False,
 		add_css=True,
+		print_style=None,
+		print_settings=None,
 	):
 		if input_dict := self.sendmail_input_dict(
 			print_html=print_html,
 			print_format=print_format,
 			send_me_a_copy=send_me_a_copy,
 			print_letterhead=print_letterhead,
+			letterhead=letterhead,
 			is_inbound_mail_communcation=is_inbound_mail_communcation,
 			print_language=print_language,
 			raw_html=raw_html,
 			add_css=add_css,
+			print_style=print_style,
+			print_settings=print_settings,
 		):
 			frappe.sendmail(now=now, **input_dict)
