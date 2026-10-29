@@ -5,17 +5,17 @@
 
 import json
 import re
+from collections import deque
 from functools import lru_cache
 from typing import Any
-
-from sql_metadata import Parser
 
 import frappe
 import frappe.permissions
 from frappe import _
 from frappe.core.doctype.access_log.access_log import make_access_log
+from frappe.desk.link_title import get_report_link_titles, send_link_titles
 from frappe.model import child_table_fields, default_fields, get_permitted_fields, optional_fields
-from frappe.model.base_document import get_controller
+from frappe.model.document import get_controller
 from frappe.model.qb_query import DatabaseQuery
 from frappe.model.utils import is_virtual_doctype
 from frappe.utils import add_user_info, cint, format_duration
@@ -31,13 +31,30 @@ _FIELDNAME_RE = re.compile(r"^[a-zA-Z0-9_]+$")
 @frappe.read_only()
 def get():
 	args = get_form_params()
+	with_link_titles = sbool(args.pop("with_link_titles", False))
+
 	# If virtual doctype, get data from controller get_list method
 	if is_virtual_doctype(args.doctype):
 		controller = get_controller(args.doctype)
 		data = compress(frappe.call(controller.get_list, args=args, **args))
 	else:
 		data = compress(execute(**args), args=args)
+
+	if with_link_titles:
+		send_compressed_link_titles(args, data)
+
 	return data
+
+
+def send_compressed_link_titles(args, data):
+	"""Send the titles of the Link values in a `compress`ed result with the response."""
+	# `compress` returns the rows untouched when there are none, and reduces a child table
+	# field to its bare fieldname, so pair the requested fields back up with its key order.
+	if not isinstance(data, dict):
+		return
+	field_info = {info.get("fieldname"): info for info in get_field_info(args.fields, args.doctype)}
+	columns = [field_info.get(key) for key in data["keys"]]
+	send_link_titles(get_report_link_titles(columns, data["values"]))
 
 
 @frappe.whitelist()
@@ -253,6 +270,8 @@ def is_standard(fieldname):
 
 @lru_cache(maxsize=1024)
 def extract_fieldnames(field):
+	from sql_metadata import Parser
+
 	from frappe.database.schema import SPECIAL_CHAR_PATTERN
 
 	if not SPECIAL_CHAR_PATTERN.findall(field):
@@ -433,6 +452,8 @@ def export_query():
 
 	form_params["as_list"] = True
 	csv_params = pop_csv_params(form_params)
+	# the report view sends this for its on-screen table; exports keep document names
+	form_params.pop("with_link_titles", None)
 	export_in_background = int(form_params.pop("export_in_background", 0))
 
 	if export_in_background:
@@ -479,8 +500,25 @@ def _export_query(form_params, csv_params, populate_response=True):
 	add_totals_row = 1 if form_params.pop("add_totals_row", None) == "1" else None
 	translate_values = 1 if form_params.pop("translate_values", None) == "1" else None
 
+	visible_names = form_params.pop("visible_names", None)
+	if isinstance(visible_names, str):
+		visible_names = frappe.parse_json(visible_names)
+	if not (isinstance(visible_names, list) and visible_names):
+		visible_names = None
+
 	if selection := form_params.pop("selected_items", None):
 		form_params["filters"] = {"name": ("in", json.loads(selection))}
+
+	# visible_names is the client's ordered display sequence
+	# When present, take precedence over generic filters/order/pagination: fetch
+	# exactly those rows, then reorder in Python below.
+	# Mirrors the visible_idx pattern in Query Report.
+	if visible_names:
+		form_params["filters"] = {"name": ("in", visible_names)}
+		form_params["order_by"] = None
+		form_params.pop("page_length", None)
+		form_params.pop("limit_page_length", None)
+		form_params.pop("start", None)
 
 	make_access_log(
 		doctype=doctype,
@@ -491,6 +529,9 @@ def _export_query(form_params, csv_params, populate_response=True):
 
 	db_query = DatabaseQuery(doctype)
 	ret = db_query.execute(**form_params)
+
+	if visible_names:
+		ret = _reorder_by_visible_names(ret, form_params.get("fields", []), doctype, visible_names)
 
 	if not frappe.permissions.can_export(doctype):
 		if frappe.permissions.can_export(doctype, is_owner=True):
@@ -554,6 +595,43 @@ def _export_query(form_params, csv_params, populate_response=True):
 		return title, file_extension, content
 
 	provide_binary_file(_(title), file_extension, content)
+
+
+def _reorder_by_visible_names(ret, fields, doctype, visible_names):
+	"""Reorder `ret` (list of row tuples, `as_list=True`) so that rows appear
+	in the same order as `visible_names`. Rows whose primary key isn't in
+	`visible_names` are dropped. If the primary key column can't be located in
+	`fields`, `ret` is returned unchanged (server-order fallback).
+
+	A child-table column makes several rows share one primary key, so rows are
+	grouped per name and consumed in order: each occurrence of a name in
+	`visible_names` takes that name's next unused row, instead of collapsing the
+	group to a single row.
+
+	Only the primary doctype's `name` column is a valid match.
+	Using linked doctype's `name` as the reorder key
+	would silently rebuild the export against the wrong identifier."""
+	name_field = f"`tab{doctype}`.`name`"
+	name_idx = None
+	for i, field in enumerate(fields):
+		if not isinstance(field, str):
+			continue
+		if field == name_field or field == "name":
+			name_idx = i
+			break
+	if name_idx is None:
+		return ret
+
+	rows_by_name = {}
+	for row in ret:
+		rows_by_name.setdefault(row[name_idx], deque()).append(row)
+
+	reordered = []
+	for name in visible_names:
+		group = rows_by_name.get(name)
+		if group:
+			reordered.append(group.popleft())
+	return reordered
 
 
 def append_totals_row(data):
@@ -749,7 +827,9 @@ def delete_bulk(doctype, items):
 		return undeleted_items
 
 	frappe.msgprint(
-		_("Deleted all documents successfully"), realtime=True, title=_("Bulk Operation Successful")
+		_("Deleted {0} records from {1} doctype").format(len(items), doctype),
+		realtime=True,
+		title=_("Bulk Operation Successful"),
 	)
 	return []
 

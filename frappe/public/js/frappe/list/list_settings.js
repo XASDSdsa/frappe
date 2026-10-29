@@ -12,7 +12,6 @@ export default class ListSettings {
 		this.fields =
 			this.settings && this.settings.fields ? JSON.parse(this.settings.fields) : [];
 		this.subject_field = null;
-		this.field_settings = {};
 		this.max_number_of_fields = 50;
 
 		frappe.model.with_doctype("List View Settings", () => {
@@ -38,17 +37,43 @@ export default class ListSettings {
 			fields: list_view_settings.fields,
 		});
 		me.dialog.set_values(me.settings);
-		me.dialog.set_primary_action(__("Save"), () => {
-			if (!me.update_fields()) return;
-			let values = me.dialog.get_values();
-			if (!values) return;
-			// Control.set_value is asynchronous; submit the just-read inputs directly.
+
+		// Collapse the unlabelled section that wraps fields_html — it adds
+		// an empty section-head + default section-body margins with no content.
+		const $fields_section = me.dialog.$wrapper.find('[data-fieldname="section_break_evqq"]');
+		$fields_section.find(".section-head").hide();
+		$fields_section.find("> .section-body").css({ "margin-top": 0, "padding-top": 0 });
+
+		me.dialog.set_primary_action(__("Save"), (values) => {
+			me.update_fields();
+			// update_fields() populates me.fields synchronously but set_value() is async,
+			// so bypass the dialog model and use me.fields directly.
 			values.fields = JSON.stringify(me.fields);
 
 			frappe.show_alert({
 				message: __("Saving"),
 				indicator: "green",
 			});
+
+			if (
+				me.listview.list_filter?.active_layout_name &&
+				me.listview.list_filter.active_layout_name !== "default_layout"
+			) {
+				const layout = me.listview.list_filter.get_active_layout();
+				if (layout && me.listview.list_filter.can_edit_layout(layout)) {
+					me.listview.list_filter
+						.update_layout_columns(layout, me.fields, { debounce: false })
+						.then(async () => {
+							// setup_columns is async (may load linked doctype meta for
+							// link-title columns); wait before rendering the header.
+							await me.listview.setup_columns(me.fields);
+							me.listview.render_header(true);
+							me.listview.apply_column_widths?.();
+							me.dialog.hide();
+						});
+					return;
+				}
+			}
 
 			frappe.call({
 				method: "frappe.desk.doctype.list_view_settings.list_view_settings.save_listview_settings",
@@ -76,7 +101,9 @@ export default class ListSettings {
 	show_dialog() {
 		let me = this;
 
-		me.update_fields();
+		if (!this.settings.fields) {
+			me.update_fields();
+		}
 
 		if (!me.dialog.get_value("total_fields")) {
 			let field_count = this.settings.total_fields;
@@ -107,44 +134,52 @@ export default class ListSettings {
 		let wrapper = fields_html.$wrapper[0];
 		let fields = ``;
 
+		me.listview.columns = me.listview.columns.filter((col) => col.type !== "Tag");
+		const columnByFieldname = {};
+		me.listview.columns.forEach((col) => {
+			if (col.df?.fieldname) columnByFieldname[col.df.fieldname] = col;
+		});
+
 		for (let idx in me.fields) {
 			if (idx == parseInt(this.max_number_of_fields)) {
 				break;
 			}
-			const fixed = idx == 0 || me.is_fixed_name(me.fields[idx]);
-			let is_sortable = fixed ? `` : `sortable`;
-			let show_sortable_handle = fixed ? `hide` : ``;
-			let can_remove =
-				idx == 0 || is_status_field(me.fields[idx]) || me.is_fixed_name(me.fields[idx])
-					? `hide`
-					: `d-flex`;
-			const label = frappe.utils.escape_html(me.fields[idx].label);
-			const width = Number(me.fields[idx].width);
+			let is_sortable = idx == 0 ? `` : `sortable`;
+			let show_sortable_handle = idx == 0 ? `hide` : ``;
+			let can_remove = idx == 0 || is_status_field(me.fields[idx]) ? `hide` : `d-flex`;
 
 			fields += `
 				<div class="control-input form-control fields_order ${is_sortable} flex"
 	 				style="margin-bottom: 5px; padding-bottom: 1.5px;"
 	 				data-fieldname="${me.fields[idx].fieldname}"
-					data-label="${label}"
+	 				data-label="${me.fields[idx].label}"
 	 				data-type="${me.fields[idx].type}">
 
 					<div class="row flex-fill align-items-center">
-						<div class="col-1 d-flex align-items-center justify-content-center px-1">
-							${frappe.utils.icon("drag", "xs", "", "", "sortable-handle " + show_sortable_handle)}
+						<div class="col-1 flex align-items-center justify-content-center px-1">
+							${frappe.utils.icon("grip", "xs", "", "", "sortable-handle " + show_sortable_handle)}
 						</div>
 
-						<div class="col d-flex align-items-center px-0">
+						<div class="col flex align-items-center px-0">
 							${__(me.fields[idx].label, null, me.doctype)}
 						</div>
 
-						<div class="col-4 px-2">
-							<input type="number" class="form-control input-xs column-width"
-								min="60" max="1200" step="1"
-								value="${Number.isInteger(width) && width >= 60 && width <= 1200 ? width : ""}"
-								placeholder="${__("Automatic")}" aria-label="${__("Column Width (px)")}">
+						<div class="col-2">
+							<input
+								inputmode="numeric"
+								autocomplete="number"
+								class="form-control text-right"
+								data-fieldname="${me.fields[idx].fieldname}"
+								style="background-color: var(--modal-bg); height: 22px;"
+								value="${
+									cint(me.fields[idx].width) ||
+									cint(columnByFieldname[me.fields[idx].fieldname]?.df?.width) ||
+									""
+								}"
+							>
 						</div>
 
-						<div class="col-1 d-flex align-items-center justify-content-center px-0">
+						<div class="col-1 flex align-items-center justify-content-center px-0">
 							<a class="text-muted remove-field align-items-center ${can_remove}"
 							   data-fieldname="${me.fields[idx].fieldname}">
 								${frappe.utils.icon("x", "xs")}
@@ -156,17 +191,28 @@ export default class ListSettings {
 
 		fields_html.html(`
 			<div class="form-group">
-				<div class="clearfix">
-					<label class="control-label" style="padding-right: 0px;">${__("Fields")}</label>
-					<label class="text-extra-muted float-right">
-						<a class="add-new-fields text-muted">
-							${__("+ Add / Remove Fields")}
-						</a>
-					</label>
+				<div class="text-right mb-1">
+					<a class="add-new-fields text-muted" style="font-size: var(--text-xs); white-space: nowrap;">
+						${__("+ Add / Remove Fields")}
+					</a>
 				</div>
-				<div class="text-muted small mb-2">${__("Column Width (px)")}: ${__(
-					"Leave blank for automatic width."
-				)}</div>
+				<div class="row flex-fill px-1 mb-1" style="font-size: var(--text-xs); color: var(--text-muted);">
+					<div class="col-1"></div>
+					<div class="col px-0">
+						<label class="control-label mb-0" style="padding-right: 0; font-size: var(--text-xs);">${__(
+							"Fields"
+						)}</label>
+					</div>
+					<div class="col-2 text-right pr-2" style="white-space: nowrap;">
+						${__("Width (px)")}
+						<span
+							class="ml-1"
+							title="${__("You can also drag column borders directly in the list view to resize")}"
+							style="cursor: help;"
+						>${frappe.utils.icon("info", "xs")}</span>
+					</div>
+					<div class="col-1"></div>
+				</div>
 				<div class="control-input-wrapper">
 				${fields}
 				</div>
@@ -177,7 +223,8 @@ export default class ListSettings {
 			handle: ".sortable-handle",
 			draggable: ".sortable",
 			onUpdate: () => {
-				if (me.update_fields()) me.refresh();
+				me.update_fields();
+				me.refresh();
 			},
 		});
 	}
@@ -204,7 +251,6 @@ export default class ListSettings {
 
 	remove_fields(fieldname) {
 		let me = this;
-		if (!me.update_fields()) return;
 		let existing_fields = me.fields.map((f) => f.fieldname);
 
 		for (let idx in me.fields) {
@@ -232,32 +278,29 @@ export default class ListSettings {
 		let wrapper = fields_html.$wrapper[0];
 
 		let fields_order = wrapper.getElementsByClassName("fields_order");
-		let fields = [];
+		me.fields = [];
 
 		for (let idx = 0; idx < fields_order.length; idx++) {
-			const row = fields_order.item(idx);
-			const input = row.querySelector(".column-width");
-			if (!input.checkValidity()) {
-				input.reportValidity();
-				return false;
-			}
-			const field = {
-				fieldname: row.getAttribute("data-fieldname"),
-				label: row.getAttribute("data-label"),
+			let el = fields_order.item(idx);
+			let fieldname = el.getAttribute("data-fieldname");
+			let width_input = el.querySelector(
+				`input.form-control[data-fieldname="${fieldname}"]`
+			);
+			let width = width_input ? cint(width_input.value) : 0;
+			let field = {
+				fieldname: fieldname,
+				label: __(el.getAttribute("data-label")),
 			};
-			if (input.value !== "") field.width = Number(input.value);
-			fields.push(field);
+			if (width) field.width = width;
+			me.fields.push(field);
 		}
 
-		me.fields = fields;
-		for (const field of fields) me.field_settings[field.fieldname] = { ...field };
 		me.dialog.set_value("fields", JSON.stringify(me.fields));
-		return true;
+		me.dialog.get_value("fields");
 	}
 
 	column_selector() {
 		let me = this;
-		if (!me.update_fields()) return;
 
 		let d = new frappe.ui.Dialog({
 			title: __("{0} Fields", [__(me.doctype)]),
@@ -280,8 +323,8 @@ export default class ListSettings {
 				},
 			],
 		});
-		d.set_primary_action(__("Save"), () => {
-			let values = d.get_values().fields;
+		d.set_primary_action(__("Save"), (dialog_values) => {
+			let values = dialog_values.fields;
 
 			me.set_removed_fields(
 				me.get_removed_listview_fields(
@@ -290,27 +333,23 @@ export default class ListSettings {
 				)
 			);
 
-			// Retain the order and widths of selected columns, then append new ones.
-			me.fields = me.fields.filter(
-				(field, index) =>
-					index === 0 ||
-					field.fieldname === "status_field" ||
-					me.is_fixed_name(field) ||
-					values.includes(field.fieldname)
-			);
-			for (const fieldname of values) {
-				if (me.fields.length >= me.max_number_of_fields) break;
-				if (me.fields.some((field) => field.fieldname === fieldname)) continue;
-				const field = me.listview.get_column_docfield(fieldname);
-				if (field) {
-					const new_field = {
-						...me.field_settings[fieldname],
-						label: field.label,
-						fieldname,
-					};
-					const name_index = me.fields.findIndex((value) => me.is_fixed_name(value));
-					if (name_index > 0) me.fields.splice(name_index, 0, new_field);
-					else me.fields.push(new_field);
+			me.fields = [];
+			me.set_subject_field(me.meta);
+			me.set_status_field();
+
+			for (let idx in values) {
+				let value = values[idx];
+
+				if (me.fields.length === parseInt(this.max_number_of_fields)) {
+					break;
+				} else if (value != me.subject_field.fieldname) {
+					let field = me.listview.get_column_docfield(value);
+					if (field) {
+						me.fields.push({
+							label: __(field.label, null, me.doctype),
+							fieldname: field.fieldname,
+						});
+					}
 				}
 			}
 
@@ -346,27 +385,14 @@ export default class ListSettings {
 
 	get_listview_fields(meta) {
 		let me = this;
-		const saved = me.fields;
-		// Use exactly the visible native columns, including display-only columns.
-		me.fields = me.listview.columns
-			.filter((col) => col.df?.fieldname)
-			.map((col) => {
-				const field = { label: col.df.label, fieldname: col.df.fieldname };
-				const previous = saved.find((value) => value.fieldname === field.fieldname);
-				const width = me.settings.fields ? previous?.width : col.additional && col.df.width;
-				if (width) field.width = width;
-				return field;
-			})
-			.uniqBy((field) => field.fieldname);
-		me.subject_field = me.fields[0];
-	}
 
-	is_fixed_name(field) {
-		return (
-			field.fieldname === "name" &&
-			this.meta.title_field &&
-			!this.listview.settings.hide_name_column
-		);
+		if (!me.settings.fields) {
+			me.set_list_view_fields(meta);
+		} else {
+			me.fields = JSON.parse(this.settings.fields);
+		}
+
+		me.fields.uniqBy((f) => f.fieldname);
 	}
 
 	set_list_view_fields(meta) {
@@ -378,13 +404,11 @@ export default class ListSettings {
 		[...meta.fields, ...me.listview.get_additional_columns()].forEach((field) => {
 			if (
 				field.in_list_view &&
-				!field.is_virtual &&
-				!(frappe.has_indicator(me.doctype) && field.fieldname === "status") &&
 				!frappe.model.no_value_type.includes(field.fieldtype) &&
 				me.subject_field.fieldname != field.fieldname
 			) {
 				me.fields.push({
-					label: field.label,
+					label: __(field.label, null, me.doctype),
 					fieldname: field.fieldname,
 				});
 			}
@@ -395,7 +419,7 @@ export default class ListSettings {
 		let me = this;
 
 		me.subject_field = {
-			label: "ID",
+			label: __("ID"),
 			fieldname: "name",
 		};
 
@@ -403,7 +427,7 @@ export default class ListSettings {
 			let field = frappe.meta.get_docfield(me.doctype, meta.title_field.trim());
 
 			me.subject_field = {
-				label: field.label,
+				label: __(field.label, null, me.doctype),
 				fieldname: field.fieldname,
 			};
 		}
@@ -417,7 +441,7 @@ export default class ListSettings {
 		if (frappe.has_indicator(me.doctype)) {
 			me.fields.push({
 				type: "Status",
-				label: "Status",
+				label: __("Status"),
 				fieldname: "status_field",
 			});
 		}
@@ -427,11 +451,7 @@ export default class ListSettings {
 		let multiselect_fields = [];
 
 		[...meta.fields, ...this.listview.get_additional_columns()].forEach((field) => {
-			if (
-				!frappe.model.no_value_type.includes(field.fieldtype) &&
-				!field.is_virtual &&
-				!(frappe.has_indicator(this.doctype) && field.fieldname === "status")
-			) {
+			if (!frappe.model.no_value_type.includes(field.fieldtype)) {
 				multiselect_fields.push({
 					label: __(field.label, null, field.doctype),
 					value: field.fieldname,

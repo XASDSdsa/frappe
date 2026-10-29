@@ -83,7 +83,7 @@ def get_extension(
 
 
 def get_local_image(file_url: str) -> tuple["ImageFile", str, str]:
-	from PIL import Image
+	from frappe.utils.image import Image
 
 	if file_url.startswith("/private"):
 		file_url_path = (file_url.lstrip("/"),)
@@ -117,9 +117,18 @@ def get_local_image(file_url: str) -> tuple["ImageFile", str, str]:
 def get_web_image(file_url: str) -> tuple["ImageFile", str, str]:
 	import requests
 	import requests.exceptions
-	from PIL import Image
+
+	from frappe.utils.data import validate_egress_url
+	from frappe.utils.image import Image
 
 	file_url = frappe.utils.get_url(file_url)
+	site_url = frappe.utils.get_url().rstrip("/")
+	if not (file_url == site_url or file_url.startswith(site_url + "/")):
+		try:
+			validate_egress_url(file_url)
+		except ValueError as e:
+			frappe.throw(_("Cannot fetch image from {0}: {1}").format(file_url, str(e)))
+
 	r = requests.get(file_url, stream=True)
 	try:
 		r.raise_for_status()
@@ -343,6 +352,7 @@ def attach_files_to_document(doc: "Document", event) -> None:
 				"attached_to_name": None,
 				"attached_to_doctype": None,
 				"attached_to_field": None,
+				"owner": frappe.session.user,
 			},
 		)
 

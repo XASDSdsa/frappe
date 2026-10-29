@@ -9,8 +9,6 @@ import shutil
 import zipfile
 from urllib.parse import quote, unquote
 
-from PIL import Image, ImageFile, ImageOps
-
 import frappe
 from frappe import _
 from frappe.database.schema import SPECIAL_CHAR_PATTERN
@@ -28,8 +26,6 @@ from frappe.utils import (
 )
 from frappe.utils.file_manager import is_safe_path
 from frappe.utils.html_utils import escape_html
-from frappe.utils.image import optimize_image, strip_exif_data
-from frappe.utils.pdf import pdf_contains_js
 
 from .exceptions import (
 	AttachmentLimitReached,
@@ -40,8 +36,6 @@ from .exceptions import (
 from .utils import *
 
 exclude_from_linked_with = True
-
-ImageFile.LOAD_TRUNCATED_IMAGES = True  # nosemgrep
 
 URL_PREFIXES = ("http://", "https://", "/api/method/")
 FILE_ENCODING_OPTIONS = ("utf-8-sig", "utf-8", "windows-1250", "windows-1252")
@@ -135,13 +129,16 @@ class File(Document):
 			return
 
 		if self.is_remote_file:
+			# a remote file has no local blob to hash
+			self.content_hash = None
 			self.validate_remote_file()
 		else:
 			self.save_file(content=self.get_content())
 			self.flags.new_file = True
 			frappe.db.after_rollback.add(self.on_rollback)
 
-		self.validate_duplicate_entry()  # Hash is generated in save_file
+		if not self.is_remote_file:
+			self.validate_duplicate_entry()  # Hash is generated in save_file
 
 	def after_insert(self):
 		if not self.is_folder:
@@ -176,6 +173,9 @@ class File(Document):
 				frappe.throw(_("A folder cannot have a File URL"))
 			return
 
+		if self.is_remote_file:
+			self.content_hash = None
+
 		self.validate_attachment_references()
 		self.enforce_public_file_restrictions()
 
@@ -201,6 +201,13 @@ class File(Document):
 
 		if self.attached_to_field and SPECIAL_CHAR_PATTERN.search(self.attached_to_field):
 			frappe.throw(_("The fieldname you've specified in Attached To Field is invalid"))
+
+		if self.flags.ignore_permissions or frappe.flags.in_install:
+			return
+
+		from frappe.handler import check_write_permission
+
+		check_write_permission(self.attached_to_doctype, self.attached_to_name)
 
 	def enforce_public_file_restrictions(self):
 		if not self.is_private and frappe.get_system_settings(
@@ -482,6 +489,8 @@ class File(Document):
 			)
 
 	def check_content(self):
+		from frappe.utils.pdf import pdf_contains_js
+
 		if self.file_type == "PDF" and self._content and pdf_contains_js(self._content):
 			frappe.throw(_("This PDF cannot be uploaded as it contains unsafe content."))
 
@@ -546,6 +555,8 @@ class File(Document):
 		crop: bool = False,
 	) -> str:
 		from requests.exceptions import HTTPError, SSLError
+
+		from frappe.utils.image import Image, ImageOps
 
 		if not self.file_url:
 			return
@@ -823,6 +834,8 @@ class File(Document):
 			and self.content_type == "image/jpeg"
 			and frappe.get_system_settings("strip_exif_metadata_from_uploaded_images")
 		):
+			from frappe.utils.image import strip_exif_data
+
 			self._content = strip_exif_data(self._content, self.content_type)
 
 		self.file_size = self.check_max_file_size()
@@ -861,7 +874,7 @@ class File(Document):
 			return self.save_file_on_filesystem()
 
 	def save_file_on_filesystem(self):
-		safe_file_name = re.sub(r"[/\\%?#]", "_", self.file_name)
+		safe_file_name = get_safe_file_name(self.file_name)
 		if self.is_private:
 			self.file_url = f"/private/files/{safe_file_name}"
 		else:
@@ -932,10 +945,21 @@ class File(Document):
 		if self.file_url:
 			self.is_private = cint(self.file_url.startswith("/private"))
 
+	def validate_file_url_matches_record(self):
+		"""Ensure file_url actually resolves back to an existing File record with this name."""
+		if not self.file_url:
+			return
+
+		actual_file_url = frappe.db.get_value("File", self.name, "file_url") if self.name else None
+		if actual_file_url != self.file_url:
+			frappe.throw(_("The File URL does not belong to this File record"), frappe.PermissionError)
+
 	@frappe.whitelist()
 	def optimize_file(self):
 		if self.is_folder:
 			raise TypeError("Folders cannot be optimized")
+
+		self.validate_file_url_matches_record()
 
 		content_type = mimetypes.guess_type(self.file_name)[0]
 		is_local_image = content_type.startswith("image/") and self.file_size > 0
@@ -946,6 +970,8 @@ class File(Document):
 
 		if is_svg:
 			raise TypeError("Optimization of SVG images is not supported")
+
+		from frappe.utils.image import optimize_image
 
 		original_content = self.get_content()
 		optimized_content = optimize_image(
@@ -1041,8 +1067,16 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 	if SYSTEM_USER_ROLE not in frappe.get_roles(user):
 		return f""" `tabFile`.`owner` = {frappe.db.escape(user)} """
 
+	# Custom DocPerm rows can outlive their DocType, drop those
+	# before frappe.get_meta() below assumes the doctype still exists.
+	candidate_doctypes = get_doctypes_with_read(user)
+	existing_doctypes = set(
+		frappe.get_all("DocType", filters={"name": ["in", candidate_doctypes]}, pluck="name")
+	)
+	readable_doctypes = [dt for dt in candidate_doctypes if dt in existing_doctypes]
+
 	openly_readable_doctypes, owner_restricted_doctypes = _split_doctypes_by_owner_constraint(
-		get_doctypes_with_read(user), user
+		readable_doctypes, user
 	)
 	# a doctype that requires an owner constraint is never additionally scoped by User
 	# Permissions here - same "if_owner takes priority, else check user permissions" rule

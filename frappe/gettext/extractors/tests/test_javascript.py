@@ -38,3 +38,26 @@ class TestJavaScript(IntegrationTestCase):
 			list(extract(BytesIO(code.encode()), {"_": None}, (), {})),
 			[(1, "gettext", "Hello {0}", [])],
 		)
+
+	def test_extract_javascript_nested_calls(self):
+		code = "__('Open {0}', [__('Email Inbox')]);"
+		self.assertEqual(
+			list(extract_javascript(code)),
+			[(1, "__", "Email Inbox"), (1, "__", "Open {0}")],
+		)
+
+		code = "__('{0} of {1}', [__('Sales Invoice'), __('Customer')], 'Breadcrumb');"
+		self.assertEqual(
+			list(extract_javascript(code)),
+			[
+				(1, "__", "Sales Invoice"),
+				(1, "__", "Customer"),
+				(1, "__", ("{0} of {1}", None, "Breadcrumb")),
+			],
+		)
+
+		code = "__('{0}: Other permission rules may also apply', [frappe.bold(__('Note'))]);"
+		self.assertEqual(
+			list(extract_javascript(code)),
+			[(1, "__", "Note"), (1, "__", "{0}: Other permission rules may also apply")],
+		)

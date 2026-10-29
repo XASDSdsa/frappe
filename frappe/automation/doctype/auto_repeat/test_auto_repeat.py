@@ -6,6 +6,7 @@ import frappe
 from frappe.automation.doctype.auto_repeat.auto_repeat import (
 	create_repeated_entries,
 	get_auto_repeat_entries,
+	get_auto_repeat_period,
 	update_reference,
 	week_map,
 )
@@ -184,6 +185,56 @@ class TestAutoRepeat(IntegrationTestCase):
 
 		docnames = frappe.get_all(doc.reference_doctype, {"auto_repeat": doc.name})
 		self.assertEqual(len(docnames), months)
+
+	def test_auto_repeat_period(self):
+		cases = [
+			# full calendar months
+			("Monthly", "2025-01-01", 1, ("2025-02-01", "2025-02-28")),
+			("Monthly", "2025-01-01", 11, ("2025-12-01", "2025-12-31")),
+			# mid-month
+			("Monthly", "2025-01-15", 1, ("2025-02-15", "2025-03-14")),
+			# month end is clamped and does not drift
+			("Monthly", "2025-01-31", 1, ("2025-02-28", "2025-03-30")),
+			("Monthly", "2025-01-31", 2, ("2025-03-31", "2025-04-29")),
+			("Quarterly", "2025-01-01", 1, ("2025-04-01", "2025-06-30")),
+			("Yearly", "2024-02-29", 1, ("2025-02-28", "2026-02-27")),
+			("Yearly", "2024-02-29", 4, ("2028-02-29", "2029-02-27")),
+			("Weekly", "2025-01-06", 2, ("2025-01-20", "2025-01-26")),
+			("Daily", "2025-01-31", 1, ("2025-02-01", "2025-02-01")),
+		]
+		for frequency, anchor, n, expected in cases:
+			with self.subTest(frequency=frequency, anchor=anchor, n=n):
+				self.assertEqual(
+					get_auto_repeat_period(anchor, frequency, n), tuple(getdate(d) for d in expected)
+				)
+
+	def test_first_generated_document_has_period(self):
+		for fieldname in ("from_date", "to_date"):
+			field = create_custom_field(
+				"ToDo", dict(fieldname=fieldname, label=fieldname, fieldtype="Date", insert_after="date")
+			)
+			self.addCleanup(field.delete)
+
+		with set_user(create_user_without_reference_access()):
+			todo = frappe.get_doc(
+				doctype="ToDo",
+				description="test recurring todo with period",
+				from_date=add_days(today(), -1),
+				to_date=add_days(today(), -1),
+			).insert()
+			doc = frappe.get_doc(
+				doctype="Auto Repeat",
+				reference_doctype="ToDo",
+				reference_document=todo.name,
+				frequency="Daily",
+				start_date=add_days(today(), -1),
+			).insert()
+
+		create_repeated_entries(get_auto_repeat_entries(getdate(today())))
+
+		new_todo = frappe.get_doc("ToDo", {"auto_repeat": doc.name, "name": ("!=", todo.name)})
+		self.assertEqual(getdate(new_todo.from_date), getdate(today()))
+		self.assertEqual(getdate(new_todo.to_date), getdate(today()))
 
 	def test_email_notification(self):
 		todo = frappe.get_doc(
@@ -387,6 +438,15 @@ class TestAutoRepeat(IntegrationTestCase):
 		new_todo_count = frappe.db.count("ToDo", {"auto_repeat": doc.name, "name": ("!=", todo.name)}, "name")
 
 		self.assertEqual(new_todo_count, 2)
+
+	def tearDown(self):
+		# every test here commits, so IntegrationTestCase's per-test rollback can't
+		# undo them. The assignee tests assign generated ToDos to Guest, which shares
+		# those ToDos with Guest; left behind, that lets anonymous API reads succeed
+		# in unrelated tests later in the same shard. Drop the committed artifacts.
+		frappe.db.delete("DocShare", {"share_doctype": "ToDo", "user": "Guest"})
+		# the leaked shares were committed, so the cleanup must be committed too
+		frappe.db.commit()  # nosemgrep
 
 
 def make_auto_repeat(**args):

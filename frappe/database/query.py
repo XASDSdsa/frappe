@@ -11,7 +11,7 @@ from pypika.terms import AggregateFunction, ArithmeticExpression, Star, Term, Va
 import frappe
 from frappe import _
 from frappe.boot import get_additional_filters_from_hooks
-from frappe.database.operator_map import NESTED_SET_OPERATORS, OPERATOR_MAP
+from frappe.database.operator_map import NESTED_SET_OPERATORS, OPERATOR_MAP, func_is
 from frappe.database.utils import (
 	DefaultOrderBy,
 	FilterValue,
@@ -20,9 +20,8 @@ from frappe.database.utils import (
 	get_doctype_sort_info,
 )
 from frappe.model import CORE_DOCTYPES as PERMITTED_CORE_DOCTYPES
-from frappe.model import OPTIONAL_FIELDS, get_permitted_fields
-from frappe.model.base_document import DOCTYPES_FOR_DOCTYPE
-from frappe.model.document import Document
+from frappe.model import OPTIONAL_FIELDS, get_permitted_fields, numeric_fieldtypes
+from frappe.model.document import DOCTYPES_FOR_DOCTYPE, Document
 from frappe.query_builder import Criterion, Field, Order, functions
 from frappe.query_builder.custom import Month, MonthName, Quarter, Year
 
@@ -38,6 +37,16 @@ CORE_DOCTYPES = DOCTYPES_FOR_DOCTYPE | frozenset(
 		"Series",
 	)
 )
+
+
+# What MariaDB coerces `''` to in `is set`; postgres rejects `''` for these columns.
+# No real date equals MariaDB's zero date, so only NULL is empty for dates.
+IS_SET_EMPTY_VALUES: dict[str, int | str | None] = {
+	**dict.fromkeys((*numeric_fieldtypes, "Rating", "Duration"), 0),
+	"Time": "00:00:00",
+	"Date": None,
+	"Datetime": None,
+}
 
 
 def _apply_date_field_filter_conversion(value, operator: str, doctype: str, field):
@@ -263,6 +272,8 @@ class Engine:
 		self.field_aliases = set()
 		self.db_query_compat = db_query_compat
 		self.permitted_fields_cache = {}  # Cache for get_permitted_fields results
+		self.link_table_aliases = {}
+		self.link_table_counts = {}
 
 		if isinstance(table, Table):
 			self.table = table
@@ -343,6 +354,16 @@ class Engine:
 			self.query._parent_doctype = self.parent_doctype
 			self.query._fields_list = getattr(self, "fields", [])
 
+		if getattr(self.query, "_name_field_injected", False) and (
+			distinct
+			or group_by
+			or any(getattr(f, "is_aggregate", False) for f in getattr(self, "fields", []))
+		):
+			frappe.throw(
+				_("Child table fields need 'name' in `fields` when using distinct or aggregate queries."),
+				exc=frappe.ValidationError,
+			)
+
 		self.query.immutable = True
 		return self.query
 
@@ -361,19 +382,41 @@ class Engine:
 			self.fields = [self.table.name]
 
 		self.query._child_queries = []
+		self.query._name_field_injected = False
 		has_select_field = False
+		has_child_queries = False
+		has_name_field = False
+		# the main table's own name under any alias, not a joined table's: distinct rows map to documents
+		selects_own_name = False
+
 		for field in self.fields:
 			if isinstance(field, DynamicTableField):
 				self.query = field.apply_select(self.query, engine=self)
 				has_select_field = True
 			elif isinstance(field, ChildQuery):
 				self.query._child_queries.append(field)
+				has_child_queries = True
 			else:
 				self.query = self.query.select(field)
 				has_select_field = True
+				is_source_name = getattr(field, "name", None) == "name"
+				alias = getattr(field, "alias", None)
+
+				if isinstance(field, Star) or (is_source_name and alias in (None, "name")):
+					has_name_field = True
+
+				if isinstance(field, Star) or is_source_name:
+					selects_own_name = selects_own_name or getattr(field, "table", None) in (None, self.table)
 
 		if not has_select_field:
 			self.query = self.query.select(self.table.name)
+			has_name_field = selects_own_name = True
+
+		self.query._selects_own_name = selects_own_name
+
+		if has_child_queries and not has_name_field:
+			self.query = self.query.select(self.table.name)
+			self.query._name_field_injected = True
 
 	def apply_filters(
 		self,
@@ -580,6 +623,13 @@ class Engine:
 			frappe.throw(_("Document cannot be used as a filter value"))
 		_operator = operator
 
+		# _assign and _liked_by store a JSON array of user ids, so `=`/`!=` never match a
+		# single member; treat them as `like`/`not like` against the serialized value.
+		if isinstance(field, str) and field in ("_assign", "_liked_by") and _operator in ("=", "!="):
+			_operator = "like" if _operator == "=" else "not like"
+			if isinstance(_value, str) and _value:
+				_value = f"%{_value}%"
+
 		if _operator.lower() in ("timespan", "previous", "next"):
 			from frappe.model.db_query import get_date_range
 
@@ -640,6 +690,10 @@ class Engine:
 				else OPERATOR_MAP["in"]
 			)
 			return operator_fn(_field, nodes or ("",))
+
+		if _operator.casefold() == "is" and isinstance(_field, Field):
+			filter_doctype = self._get_field_doctype(_field, doctype or self.doctype)
+			return func_is(_field, _value, self._get_is_set_empty_value(filter_doctype, _field.name))
 
 		if (
 			self.is_postgres and _operator.casefold() == "like"
@@ -1575,6 +1629,23 @@ class Engine:
 		if condition := self.get_permission_conditions(self.permission_doctype, self.permission_table):
 			self.query = self.query.where(condition)
 
+	def get_link_table_alias(self, doctype: str, link_fieldname: str) -> str:
+		"""A stable, unique alias for a linked table joined via a specific link field.
+
+		Keyed by (doctype, link_fieldname) so the select and filter passes of the same
+		field share one join, and counted per target doctype so two link fields to the
+		same doctype get separate joins. A counter is used instead of the field name so
+		the alias can't collide when doctype names contain underscores, and the `tab_`
+		prefix keeps it out of the real table namespace, which doctype naming rules
+		forbid from starting with an underscore.
+		"""
+		key = (doctype, link_fieldname)
+		if key not in self.link_table_aliases:
+			count = self.link_table_counts.get(doctype, 0) + 1
+			self.link_table_counts[doctype] = count
+			self.link_table_aliases[key] = f"tab_{doctype}_{count}"
+		return self.link_table_aliases[key]
+
 	def get_permission_conditions(self, doctype: str, table: Table) -> Criterion | None:
 		role_permissions = frappe.permissions.get_role_permissions(doctype, user=self.user)
 		has_role_permission = role_permissions.get("read") or role_permissions.get("select")
@@ -1597,7 +1668,7 @@ class Engine:
 		elif user_perm_conditions := self.get_user_permission_conditions(doctype, table):
 			conditions.extend(user_perm_conditions)
 
-		conditions.extend(self.get_permission_query_conditions(doctype))
+		conditions.extend(self.get_permission_query_conditions(doctype, table))
 
 		if not conditions:
 			# no conditions to apply, all documents are accessible
@@ -1623,7 +1694,9 @@ class Engine:
 			tables.append(join.item.get_sql())
 		return list(set(tables))
 
-	def get_permission_query_conditions(self, doctype: str | None = None) -> list["RawCriterion"]:
+	def get_permission_query_conditions(
+		self, doctype: str | None = None, table: Table | None = None
+	) -> list["Criterion"]:
 		"""Add permission query conditions from hooks and server scripts"""
 		from frappe.core.doctype.server_script.server_script_utils import get_server_script_map
 
@@ -1651,6 +1724,13 @@ class Engine:
 				self.user, active_child_tables=active_child_tables
 			):
 				conditions.append(RawCriterion(f"({condition})"))
+
+		if conditions and getattr(table, "alias", None):
+			base_table = frappe.qb.DocType(doctype)
+			permitted_names = (
+				frappe.qb.from_(base_table).select(base_table.name).where(Criterion.all(conditions))
+			)
+			return [table.name.isin(permitted_names)]
 		return conditions
 
 	def get_permission_type(
@@ -1766,6 +1846,25 @@ class Engine:
 				conditions.append(c.get_sql(with_namespace=True, quote_char=quote_char))
 		finally:
 			self.apply_permissions = original_apply_permissions
+
+	def _get_field_doctype(self, field: Term, default: str) -> str:
+		"""The doctype a parsed field's table belongs to; a joined table is not the query's own."""
+		table = getattr(field, "table", None)
+		if table is None:
+			return default
+		try:
+			return get_doctype_name(getattr(table, "_table_name", None) or table.get_sql())
+		except Exception:
+			return default
+
+	def _get_is_set_empty_value(self, doctype: str, fieldname: str) -> int | str | None:
+		from frappe.model.meta import get_default_df
+
+		try:
+			docfield = get_default_df(fieldname) or frappe.get_meta(doctype).get_field(fieldname)
+		except frappe.DoesNotExistError:
+			return ""
+		return IS_SET_EMPTY_VALUES.get(docfield.fieldtype, "") if docfield else ""
 
 	def _is_field_nullable(self, doctype: str, fieldname: str) -> bool:
 		"""Check if a field can contain NULL values."""
@@ -2066,21 +2165,24 @@ class LinkTableField(DynamicTableField):
 		self.field = self.table[self.fieldname]
 
 	def apply_select(self, query: QueryBuilder, engine: "Engine" = None) -> QueryBuilder:
-		table = frappe.qb.DocType(self.doctype)
 		query = self.apply_join(query, engine=engine)
-		return query.select(getattr(table, self.fieldname).as_(self.alias or None))
+		return query.select(self.field.as_(self.alias or None))
 
 	def apply_join(self, query: QueryBuilder, engine: "Engine" = None) -> QueryBuilder:
-		table = frappe.qb.DocType(self.doctype)
+		if engine is not None:
+			alias = engine.get_link_table_alias(self.doctype, self.link_fieldname)
+			self.table = frappe.qb.DocType(self.doctype).as_(alias)
+			self.field = self.table[self.fieldname]
+
 		main_table = frappe.qb.DocType(self.parent_doctype)
-		if not query.is_joined(table):
-			clause = table.name == getattr(main_table, self.link_fieldname)
+		if not query.is_joined(self.table):
+			clause = self.table.name == getattr(main_table, self.link_fieldname)
 
 			if engine and engine.apply_permissions:
-				if condition := engine.get_permission_conditions(self.doctype, table):
+				if condition := engine.get_permission_conditions(self.doctype, self.table):
 					clause &= condition
 
-			query = query.left_join(table).on(clause)
+			query = query.left_join(self.table).on(clause)
 
 		return query
 

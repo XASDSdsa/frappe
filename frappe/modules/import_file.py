@@ -6,7 +6,7 @@ import os
 import orjson
 
 import frappe
-from frappe.model.base_document import get_controller
+from frappe.model.document import get_controller
 from frappe.modules import get_module_path, scrub_dt_dn
 from frappe.query_builder import DocType
 from frappe.utils import get_datetime, now
@@ -124,6 +124,16 @@ def import_file_by_path(
 			is_db_timestamp_latest = db_modified_timestamp and (
 				get_datetime(doc.get("modified")) <= get_datetime(db_modified_timestamp)
 			)
+
+			# board names are global, so an app's board never replaces a site's own
+			if (
+				not force
+				and doc["doctype"] == "Kanban Board"
+				and db_modified_timestamp
+				and frappe.db.get_value("Kanban Board", doc["name"], "is_standard") != "Yes"
+			):
+				print(f"Skipping {path}: a Kanban Board named {doc['name']} already exists on this site")
+				continue
 
 			if not force and db_modified_timestamp:
 				stored_hash = None

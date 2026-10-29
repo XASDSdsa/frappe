@@ -46,15 +46,33 @@ class OAuth2DynamicClientMetadata(BaseModel):
 	jwks: dict | None = None
 
 
-def make_request(method: str, url: str, auth=None, headers=None, data=None, json=None, params=None):
+def make_request(
+	method: str,
+	url: str,
+	auth=None,
+	headers=None,
+	data=None,
+	json=None,
+	params=None,
+	*,
+	session=None,
+	timeout=None,
+):
 	auth = auth or ""
 	data = data or {}
 	headers = headers or {}
 
 	try:
-		s = get_request_session()
+		s = session or get_request_session()
 		response = frappe.flags.integration_request = s.request(
-			method, url, data=data, auth=auth, headers=headers, json=json, params=params
+			method,
+			url,
+			data=data,
+			auth=auth,
+			headers=headers,
+			json=json,
+			params=params,
+			timeout=timeout,
 		)
 		response.raise_for_status()
 
@@ -231,6 +249,11 @@ def _is_secure_redirect_uri(uri: HttpUrl) -> bool:
 
 	if uri.scheme != "http":
 		return False
+
+	# RFC 8252 prefers loopback IP literals, but most MCP clients register "localhost" and
+	# browsers resolve it to loopback without DNS, so rejecting it only breaks real clients.
+	if uri.host == "localhost":
+		return True
 
 	try:
 		return ipaddress.ip_address((uri.host or "").strip("[]")).is_loopback

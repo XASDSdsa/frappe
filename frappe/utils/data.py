@@ -21,7 +21,6 @@ from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlparse, urlunpa
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import orjson
-from click import secho
 from dateutil import parser
 from dateutil.parser import ParserError
 from dateutil.relativedelta import relativedelta
@@ -60,6 +59,7 @@ if typing.TYPE_CHECKING:
 	from collections.abc import Mapping
 
 	from PIL.ImageFile import ImageFile as PILImageFile
+	from werkzeug.wrappers import Request
 
 	T = TypeVar("T")
 
@@ -1021,6 +1021,8 @@ def has_common(l1: typing.Hashable, l2: typing.Hashable) -> bool:
 
 def cast_fieldtype(fieldtype, value, show_warning=True):
 	if show_warning:
+		from click import secho
+
 		message = (
 			"Function `frappe.utils.data.cast_fieldtype` has been deprecated in favour"
 			" of `frappe.utils.data.cast`. Use the newer util for safer type casting."
@@ -1405,6 +1407,12 @@ def parse_val(v):
 	return v
 
 
+def get_currency_precision() -> int | None:
+	"""Return the configured Currency Precision, or None if it isn't set."""
+	currency_precision = frappe.db.get_default("currency_precision")
+	return cint(currency_precision) if currency_precision not in (None, "") else None
+
+
 def fmt_money(
 	amount: str | float | int | None,
 	precision: int | None = None,
@@ -1415,7 +1423,7 @@ def fmt_money(
 	number_format = NumberFormat.from_string(format) if format else get_number_format()
 
 	if precision is None:
-		precision = cint(frappe.db.get_default("currency_precision")) or None
+		precision = get_currency_precision()
 
 	if precision is None:
 		precision = number_format.precision
@@ -1480,7 +1488,7 @@ def fmt_money(
 	if amount != "0":
 		amount = minus + amount
 
-	if currency and frappe.defaults.get_global_default("hide_currency_symbol") != "Yes":
+	if currency and frappe.defaults.get_global_default("hide_currency_symbol") not in ("1", "Yes"):
 		symbol = frappe.db.get_value("Currency", currency, "symbol", cache=True) or currency
 		symbol_on_right = frappe.db.get_value("Currency", currency, "symbol_on_right", cache=True)
 
@@ -1627,6 +1635,118 @@ def is_image(filepath: str) -> bool:
 	return (guess_type(filepath)[0] or "").startswith("image/")
 
 
+def validate_egress_url(url: str) -> None:
+	"""Raise ValueError if url resolves to a private/internal address.
+
+	Guards server-side HTTP fetches against SSRF by resolving the hostname and
+	blocking loopback, link-local (including 169.254.169.254), private, and
+	reserved ranges regardless of the URL's textual representation.
+	"""
+	import ipaddress
+	import socket
+
+	parsed = urlparse(url)
+	if parsed.scheme not in ("http", "https"):
+		raise ValueError(f"Disallowed scheme: {parsed.scheme!r}")
+
+	hostname = parsed.hostname
+	if not hostname:
+		raise ValueError("URL has no hostname")
+
+	try:
+		addr_info = socket.getaddrinfo(hostname, None)
+	except socket.gaierror as exc:
+		raise ValueError(f"Cannot resolve host {hostname!r}") from exc
+
+	for record in addr_info:
+		try:
+			ip = ipaddress.ip_address(record[4][0])
+		except (ValueError, IndexError):
+			continue
+		if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+			raise ValueError(f"Requests to internal address {ip} are not permitted")
+
+
+def get_image_thumbnail_uri(url: str, max_dim: int = 400, quality: int = 80) -> str:
+	"""Return a base64 data: URI thumbnail of `url`, or the original `url` on
+	any error. Used by print templates to keep generated PDFs small: Chrome's
+	`Page.printToPDF` embeds images at their natural resolution regardless of
+	the CSS display size, so a 5000x5000 stock photo bloats the PDF by several
+	MB even when the image is rendered at 100px.
+
+	Only http://, https:// and /-rooted URLs are processed; anything else is
+	returned unchanged so the caller's URL-scheme validation is preserved.
+	"""
+	import base64
+	import io
+	import os
+
+	if not url or not isinstance(url, str):
+		return url
+	if not (url.startswith("http://") or url.startswith("https://") or url.startswith("/")):
+		return url
+
+	# Per-request cache so repeated rows that share an image only resize once.
+	cache = getattr(frappe.local, "_print_thumbnail_cache", None)
+	if cache is None:
+		cache = frappe.local._print_thumbnail_cache = {}
+	key = (url, max_dim, quality)
+	if key in cache:
+		return cache[key]
+
+	if not url.startswith("/"):
+		try:
+			validate_egress_url(url)
+		except ValueError:
+			return url
+
+	try:
+		if url.startswith("/"):
+			path = None
+			for prefix in ("public", "private"):
+				candidate = frappe.get_site_path(prefix, url.lstrip("/"))
+				if os.path.exists(candidate):
+					path = candidate
+					break
+			if not path:
+				return url
+			with open(path, "rb") as f:
+				content = f.read()
+		else:
+			import requests
+
+			r = requests.get(url, timeout=5, stream=True, allow_redirects=False)
+			r.raise_for_status()
+			chunks, total = [], 0
+			for chunk in r.iter_content(8192):
+				chunks.append(chunk)
+				total += len(chunk)
+				if total > 20 * 1024 * 1024:
+					return url
+			content = b"".join(chunks)
+
+		from PIL import Image
+
+		img = Image.open(io.BytesIO(content))
+		img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+		fmt = "PNG" if img.mode in ("RGBA", "LA", "P") else "JPEG"
+		if fmt == "JPEG" and img.mode != "RGB":
+			img = img.convert("RGB")
+		buf = io.BytesIO()
+		save_kwargs = {"format": fmt, "optimize": True}
+		if fmt == "JPEG":
+			save_kwargs["quality"] = quality
+		img.save(buf, **save_kwargs)
+		encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+		data_uri = f"data:image/{fmt.lower()};base64,{encoded}"
+		cache[key] = data_uri
+		return data_uri
+	except Exception:
+		# Network/decode failures fall back to the original URL so the cell
+		# still renders something. No per-row log to avoid error log spam.
+		return url
+
+
 def get_thumbnail_base64_for_image(src: str) -> dict[str, str] | None:
 	"""Return the base64 encoded string for the thumbnail of the given image source path.
 
@@ -1769,7 +1889,7 @@ def comma_or(some_list: list | tuple, add_quotes=True) -> str:
 
 	try:
 		locale = Locale.parse(frappe.local.lang, sep="-")
-		pattern = locale.list_patterns["or"]["end"]
+		pattern = locale.list_patterns["or"]["2" if len(some_list) == 2 else "end"]
 	except Exception:
 		pattern = frappe._("{0} or {1}")
 
@@ -1787,7 +1907,7 @@ def comma_and(some_list: list | tuple, add_quotes=True) -> str:
 
 	try:
 		locale = Locale.parse(frappe.local.lang, sep="-")
-		pattern = locale.list_patterns["standard"]["end"]
+		pattern = locale.list_patterns["standard"]["2" if len(some_list) == 2 else "end"]
 	except Exception:
 		pattern = frappe._("{0} and {1}")
 
@@ -1904,11 +2024,19 @@ def get_url(
 	return urljoin(host_name, uri) if uri else host_name
 
 
+def get_request_host(request: "Request") -> str:
+	return request.host or request.headers.get("Host", "")
+
+
 def get_host_name_from_request() -> str:
 	"""Return the hostname (`request.host`) from the request headers."""
-	if hasattr(frappe.local, "request") and frappe.local.request and frappe.local.request.host:
+	if (
+		hasattr(frappe.local, "request")
+		and frappe.local.request
+		and (host := get_request_host(frappe.local.request))
+	):
 		protocol = "https://" if "https" == frappe.get_request_header("X-Forwarded-Proto", "") else "http://"
-		return protocol + frappe.local.request.host
+		return protocol + host
 
 
 def url_contains_port(url: str) -> bool:
@@ -2004,7 +2132,7 @@ def get_absolute_url(doctype: str, name: str) -> str:
 
 	e.g. when doctype="Sales Invoice" and name="INV-00001", returns '/desk/sales-invoice/INV-00001'
 	"""
-	return f"/desk/{quoted(slug(doctype))}/{quoted(name)}"
+	return f"/desk/{quoted(slug(doctype))}/{quote(cstr(name), safe='')}"
 
 
 def get_url_to_form(doctype: str, name: str | None = None) -> str:
@@ -2016,7 +2144,7 @@ def get_url_to_form(doctype: str, name: str | None = None) -> str:
 	if not name:
 		uri = f"/desk/{quoted(slug(doctype))}"
 	else:
-		uri = f"/desk/{quoted(slug(doctype))}/{quoted(name)}"
+		uri = f"/desk/{quoted(slug(doctype))}/{quote(cstr(name), safe='')}"
 
 	return get_url(uri=uri)
 
@@ -2041,9 +2169,9 @@ def get_url_to_report(name, report_type: str | None = None, doctype: str | None 
 	get_url_to_report("Revenue", "Report Builder", "Sales Invoice") -> 'https://frappe.io/desk/sales-invoice/view/report/Revenue'
 	"""
 	if report_type == "Report Builder":
-		return get_url(uri=f"/desk/{quoted(slug(doctype))}/view/report/{quoted(name)}")
+		return get_url(uri=f"/desk/{quoted(slug(doctype))}/view/report/{quote(cstr(name), safe='')}")
 	else:
-		return get_url(uri=f"/desk/query-report/{quoted(name)}")
+		return get_url(uri=f"/desk/query-report/{quote(cstr(name), safe='')}")
 
 
 def get_url_to_report_with_filters(name, filters, report_type=None, doctype=None):
@@ -2051,7 +2179,7 @@ def get_url_to_report_with_filters(name, filters, report_type=None, doctype=None
 	if report_type == "Report Builder":
 		return get_url(uri=f"/desk/{quoted(slug(doctype))}/view/report?{filters}")
 
-	return get_url(uri=f"/desk/query-report/{quoted(name)}?{filters}")
+	return get_url(uri=f"/desk/query-report/{quote(cstr(name), safe='')}?{filters}")
 
 
 def get_filtered_list_url(doctype: str, docnames: list[str] | None = None) -> str:
